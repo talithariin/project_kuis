@@ -19,3 +19,7 @@ export const registerSchema = yup.object().shape({
     .required("Birthdate is required")
     .max(new Date(), "Birthdate cannot be in the future"),
 });
+
+export const classroomSchema = yup.object().shape({
+  name: yup.string().required("Class Name required"),
+});

@@ -18,8 +18,9 @@ const authJwt = (req, res, next) => {
     }
     req.userId = decoded.userId;
     req.role = decoded.role;
-    console.log(decoded.role);
-    console.log(req.originalUrl);
+    console.log(`Decoded role ${req.role}`);
+    console.log(`Id user ${req.userId}`);
+
     // jika tidak punya akses
     if (!roleAccess(decoded.role, req.originalUrl)) {
       return next(new Error("Unauthorized_Access"));
