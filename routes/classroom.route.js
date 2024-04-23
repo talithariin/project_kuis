@@ -1,20 +1,11 @@
+// routes/classroom.route.js
 import { Router } from "express";
-import { create } from "../controllers/classroom.controller.js";
-import { classroomSchema } from "../middlewares/validators.js";
+import { create, findAll } from "../controllers/classroom.controller.js";
+import { validateClassroomSchema } from "../middlewares/validators.js";
 
 const classroomRoute = Router();
 
-classroomRoute.post(
-  "/",
-  async (req, res, next) => {
-    try {
-      await classroomSchema.validate(req.body, { abortEarly: false });
-      next();
-    } catch (error) {
-      res.status(400).json({ errors: error.errors });
-    }
-  },
-  create
-);
+classroomRoute.post("/", validateClassroomSchema, create);
+classroomRoute.get("/", findAll);
 
 export default classroomRoute;

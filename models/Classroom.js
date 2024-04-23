@@ -22,7 +22,12 @@ Classroom.create = (newClass, result) => {
 
 Classroom.getAll = (result) => {
   sql.query(`SELECT * FROM ${tableName}`, (err, res) => {
-    if (err) result(err, null);
+    if (err) {
+      console.log("Error while getting classrooms:", err);
+      result(err, null);
+      return;
+    }
+    console.log("Classrooms data:", res); // Tambahkan logging untuk memeriksa data yang diterima
     result(null, res);
   });
 };

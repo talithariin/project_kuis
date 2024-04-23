@@ -23,3 +23,12 @@ export const registerSchema = yup.object().shape({
 export const classroomSchema = yup.object().shape({
   name: yup.string().required("Class Name required"),
 });
+
+export const validateClassroomSchema = async (req, res, next) => {
+  try {
+    await classroomSchema.validate(req.body, { abortEarly: false });
+    next();
+  } catch (error) {
+    res.status(400).json({ errors: error.errors });
+  }
+};

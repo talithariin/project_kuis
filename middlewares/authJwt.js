@@ -7,10 +7,6 @@ const authJwt = (req, res, next) => {
   if (!token) {
     return next(new Error("Missing_Token"));
   }
-  console.log(token);
-  console.log("Original URL:", req.originalUrl);
-  console.log("URL:", req.url);
-
   //   verify token valid
   jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
     if (err) {
@@ -18,20 +14,23 @@ const authJwt = (req, res, next) => {
     }
     req.userId = decoded.userId;
     req.role = decoded.role;
-    console.log(`Decoded role ${req.role}`);
-    console.log(`Id user ${req.userId}`);
+    console.log(`Id ${req.userId}`);
+    console.log(`Role ${req.role}`);
+    console.log(`Req original Url ${req.originalUrl}`);
+    console.log(`Req url ${req.url}`);
 
-    // jika tidak punya akses
-    if (!roleAccess(decoded.role, req.originalUrl)) {
+    if (
+      !roleAccess(
+        decoded.role,
+        req.originalUrl,
+        req.method,
+        req.userId,
+        req.url
+      )
+    ) {
       return next(new Error("Unauthorized_Access"));
     }
-    // Menambahkan pengecekan apakah pengguna hanya dapat memperbarui profil mereka sendiri
-    if (req.method === "PUT" && req.originalUrl.startsWith("/profile/")) {
-      const requestedUserId = parseInt(req.originalUrl.split("/")[2]);
-      if (requestedUserId !== req.userId) {
-        return next(new Error("Unauthorized_Access"));
-      }
-    }
+
     next();
   });
 };
