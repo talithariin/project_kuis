@@ -28,9 +28,7 @@ export const update = async (req, res, next) => {
         return next(new Error("User_Not_Found"));
       } else {
         console.log(err);
-        return res.status(500).send({
-          message: `error woy`,
-        });
+        return next(new Error("Internal_Server_Error"));
       }
     } else {
       if (userExist) {

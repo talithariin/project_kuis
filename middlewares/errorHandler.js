@@ -3,6 +3,10 @@ const errorHandler = (err, req, res, next) => {
   let message;
   console.log(err.message);
   switch (err.message) {
+    case "Error_Disini_Woy":
+      statusCode = 404;
+      message = "Error disini woy";
+      break;
     case "Username_Already_Exist":
       statusCode = 400;
       message = "Username already exist";

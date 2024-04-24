@@ -14,10 +14,10 @@ const authJwt = (req, res, next) => {
     }
     req.userId = decoded.userId;
     req.role = decoded.role;
-    console.log(`Id ${req.userId}`);
-    console.log(`Role ${req.role}`);
-    console.log(`Req original Url ${req.originalUrl}`);
-    console.log(`Req url ${req.url}`);
+    // console.log(`Id ${req.userId}`);
+    // console.log(`Role ${req.role}`);
+    // console.log(`Req original Url ${req.originalUrl}`);
+    // console.log(`Req url ${req.url}`);
 
     if (
       !roleAccess(
@@ -30,7 +30,6 @@ const authJwt = (req, res, next) => {
     ) {
       return next(new Error("Unauthorized_Access"));
     }
-
     next();
   });
 };
