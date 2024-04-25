@@ -77,3 +77,47 @@ export const validateUpdateQuizSchema = async (req, res, next) => {
     res.status(400).json({ errors: error.errors });
   }
 };
+
+export const questionSchema = yup.object().shape({
+  question_text: yup.string().required("'question_text' is required"),
+  options: yup.object().shape({
+    a: yup.string().required("Option 'a' is required"),
+    b: yup.string().required("Option 'b' is required"),
+    c: yup.string().required("Option 'c' is required"),
+    d: yup.string().required("Option 'd' is required"),
+    e: yup.string().required("Option 'e' is required"),
+  }),
+  quiz_id: yup
+    .number()
+    .required("Quiz ID is required")
+    .integer("Quiz ID must be an integer"),
+});
+
+export const validateQuestionSchema = async (req, res, next) => {
+  try {
+    await questionSchema.validate(req.body, { abortEarly: false });
+    next();
+  } catch (error) {
+    res.status(400).json({ errors: error.errors });
+  }
+};
+
+export const updateQuestionSchema = yup.object().shape({
+  question_text: yup.string().required("'question_text' is required"),
+  options: yup.object().shape({
+    a: yup.string().required("Option 'a' is required"),
+    b: yup.string().required("Option 'b' is required"),
+    c: yup.string().required("Option 'c' is required"),
+    d: yup.string().required("Option 'd' is required"),
+    e: yup.string().required("Option 'e' is required"),
+  }),
+});
+
+export const validateUpdateQuestionSchema = async (req, res, next) => {
+  try {
+    await updateQuestionSchema.validate(req.body, { abortEarly: false });
+    next();
+  } catch (error) {
+    res.status(400).json({ errors: error.errors });
+  }
+};

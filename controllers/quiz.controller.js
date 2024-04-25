@@ -1,10 +1,7 @@
 import Quiz from "../models/Quiz.js";
 import Classroom from "../models/Classroom.js";
 import User from "../models/User.js";
-import {
-  findOne as findClassroomById,
-  findAll as findAllClassrooms,
-} from "./classroom.controller.js";
+import { findOne as findClassroomById } from "./classroom.controller.js";
 
 export const create = (req, res) => {
   if (req.body.is_public && !req.body.classroom_id) {
@@ -28,13 +25,50 @@ export const create = (req, res) => {
 
 export const findAll = async (req, res, next) => {
   try {
-    await findAllClassrooms(req, res, async (err, classroomsStudentsOwner) => {
+    Quiz.getAll(async (err, quizData) => {
       if (err) {
         console.log(err);
-        return next(new Error("Internal_Server_Error"));
+        return res.status(500).send({ msg: "Exist some error" });
       }
 
-      res.send(classroomsStudentsOwner);
+      const quizzesWithClassrooms = await Promise.all(
+        quizData.map(async (quiz) => {
+          try {
+            // Panggil fungsi findClassroomById untuk mendapatkan data kelas berdasarkan classroom_id
+            const classroom = await new Promise((resolve, reject) => {
+              findClassroomById(
+                { params: { id: quiz.classroom_id } },
+                // Gunakan res.send() sebagai resolve agar tidak langsung mengirimkan respons
+                { send: (classroomData) => resolve(classroomData) },
+                (err, classroomData) => {
+                  if (err) {
+                    reject(err);
+                  } else {
+                    resolve(classroomData);
+                  }
+                }
+              );
+            });
+            // Mengembalikan objek yang berisi informasi kuis dan kelas
+            return {
+              id: quiz.id,
+              name: quiz.name,
+              is_public: quiz.is_public,
+              classroom,
+            };
+          } catch (error) {
+            console.log("Error fetching classroom data:", error);
+            return {
+              id: quiz.id,
+              name: quiz.name,
+              is_public: quiz.is_public,
+              classroom: null,
+            };
+          }
+        })
+      );
+
+      res.send(quizzesWithClassrooms);
     });
   } catch (error) {
     console.log("Error:", error);
@@ -44,27 +78,42 @@ export const findAll = async (req, res, next) => {
 
 export const findOne = async (req, res, next) => {
   try {
-    await findClassroomById(req, res, async (err, classroomData) => {
+    Quiz.findById(req.params.id, async (err, quizData) => {
       if (err) {
-        return next(new Error("Internal_Server_Error")); // Menangani kesalahan internal server
+        if (err.type === "not_found") {
+          res.status(404).send({
+            message: `Not found quiz with id : ${req.params.id}`,
+          });
+        } else {
+          res.status(500).send({ msg: "Exist some error" });
+        }
+      } else {
+        try {
+          // Panggil fungsi findClassroomById untuk mendapatkan data kelas berdasarkan classroom_id
+          const classroom = await new Promise((resolve, reject) => {
+            findClassroomById(
+              { params: { id: quizData.classroom_id } },
+              // Gunakan res.send() sebagai resolve agar tidak langsung mengirimkan respons
+              { send: (classroomData) => resolve(classroomData) },
+              (err, classroomData) => {
+                if (err) {
+                  reject(err);
+                } else {
+                  resolve(classroomData);
+                }
+              }
+            );
+          });
+
+          res.send({
+            ...quizData,
+            classroom,
+          });
+        } catch (error) {
+          console.log("Error fetching classroom data:", error);
+          res.status(500).send({ msg: "Exist some error" });
+        }
       }
-
-      const owner = await new Promise((resolve, reject) => {
-        User.findById(classroomData.owner_id, (err, user) => {
-          if (err) {
-            reject(err);
-          } else {
-            resolve(user);
-          }
-        });
-      });
-
-      const quizExpanded = {
-        id: req.params.id,
-        owner,
-      };
-
-      res.send(quizExpanded);
     });
   } catch (error) {
     console.log("Error:", error);

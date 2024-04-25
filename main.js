@@ -7,6 +7,7 @@ import authJwt from "./middlewares/authJwt.js";
 import profileRoute from "./routes/profile.route.js";
 import classroomRoute from "./routes/classroom.route.js";
 import quizRoute from "./routes/quiz.route.js";
+import questionRoute from "./routes/question.route.js";
 
 const app = express();
 dotenv.config();
@@ -21,6 +22,7 @@ app.use("/auth", authRoute);
 app.use("/profile", authJwt, profileRoute);
 app.use("/classroom", authJwt, classroomRoute);
 app.use("/quiz", authJwt, quizRoute);
+app.use("/question", authJwt, questionRoute);
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 3000;
