@@ -39,7 +39,7 @@ export const update = async (req, res, next) => {
   });
 };
 
-export const findAll = (req, res) => {
+export const findAll = (req, res, next) => {
   User.getAll((err, data) => {
     if (err) {
       return next(new Error("Internal_Server_Error"));
@@ -48,7 +48,7 @@ export const findAll = (req, res) => {
   });
 };
 
-export const findOne = (req, res) => {
+export const findOne = (req, res, next) => {
   User.findById(req.params.id, (err, data) => {
     if (err) {
       if (err.type === "not_found") {
@@ -64,7 +64,7 @@ export const findOne = (req, res) => {
   });
 };
 
-export const destroy = (req, res) => {
+export const destroy = (req, res, next) => {
   User.delete(req.params.id, (err, data) => {
     if (err) {
       if (err.type === "not_found") {
@@ -72,7 +72,7 @@ export const destroy = (req, res) => {
           message: `Not found user with id : ${req.params.id}`,
         });
       } else {
-        res.status(500).send({ msg: "Exist some error" });
+        return next(new Error("Internal_Server_Error"));
       }
     } else {
       res.send({ msg: "Success delete user" });

@@ -1,7 +1,8 @@
 import Question from "../models/Question.js";
 import Quiz from "../models/Quiz.js";
+import Classroom from "../models/Classroom.js";
 
-export const create = (req, res) => {
+export const create = (req, res, next) => {
   const newQuestion = new Question({
     question_text: req.body.question_text,
     options: req.body.options,
@@ -12,100 +13,62 @@ export const create = (req, res) => {
   Question.create(newQuestion, (err, data) => {
     if (err) {
       console.log(err);
-      return res.status(500).send({ msg: "Exist some error" });
+      return next(new Error("Internal_Server_Error"));
     }
     res.send(data);
   });
 };
 
-export const findAll = async (req, res, next) => {
-  Question.getAll(async (err, data) => {
-    if (err) {
-      console.log(err);
-      return res.status(500).send({ msg: "Exist some error" });
-    }
-    try {
-      const quizzes = await Promise.all(
-        data.map((question) => {
-          return new Promise((resolve, reject) => {
-            Quiz.findById(question.quiz_id, (err, quiz) => {
-              if (err) {
-                reject(err);
-              } else {
-                resolve(quiz);
-              }
-            });
-          });
-        })
-      );
+export const findAllByQuizId = async (req, res, next) => {
+  try {
+    const quizId = req.params.quizId;
 
-      const mergedData = data.map((question, index) => {
+    Question.getAllByQuizId(quizId, async (err, data) => {
+      if (err) {
+        console.log(err);
+        return next(new Error("Internal_Server_Error"));
+      }
+
+      if (data.length === 0) {
+        return res.send([]);
+      }
+
+      const quiz = await new Promise((resolve, reject) => {
+        Quiz.findById(quizId, (err, quiz) => {
+          if (err) {
+            reject(err);
+          } else {
+            resolve(quiz);
+          }
+        });
+      });
+
+      const mergedData = data.map((question) => {
         const options = JSON.parse(question.options);
         return {
           ...question,
           options: options,
-          quiz: quizzes[index],
+          quiz: quiz,
         };
       });
 
       res.send(mergedData);
-    } catch (error) {
-      console.error(error);
-      return res.status(500).send({ msg: "Exist some error" });
-    }
-  });
+    });
+  } catch (error) {
+    console.error(error);
+    return next(new Error("Internal_Server_Error"));
+  }
 };
 
-export const findOne = (req, res) => {
-  Question.findById(req.params.id, async (err, data) => {
+export const findOne = async (req, res, next) => {
+  Question.findById(req.params.questionId, (err, data) => {
     if (err) {
       if (err.type === "not_found") {
         res.status(404).send({
-          message: `Not found question with id : ${req.params.id}`,
+          message: `Not found question with id : ${req.params.questionId}`,
         });
       } else {
-        res.status(500).send({ msg: "Exist some error" });
-      }
-    } else {
-      try {
-        const options = JSON.parse(data.options);
-
-        const quiz = await new Promise((resolve, reject) => {
-          Quiz.findById(data.quiz_id, (err, quiz) => {
-            if (err) {
-              reject(err);
-            } else {
-              resolve(quiz);
-            }
-          });
-        });
-
-        const mergedData = {
-          ...data,
-          options: options,
-          quiz: quiz,
-        };
-
-        res.send(mergedData);
-      } catch (error) {
-        console.error(error);
-        return res.status(500).send({ msg: "Exist some error" });
-      }
-    }
-  });
-};
-
-export const update = (req, res) => {
-  const questionData = new Question(req.body);
-  Question.update(req.params.id, questionData, (err, data) => {
-    if (err) {
-      if (err.type === "not_found") {
-        res.status(404).send({
-          message: `Not found student with id : ${req.params.id}`,
-        });
-      } else {
-        console.log(err);
-        res.status(500).send({ msg: "Exist some error" });
+        return next(new Error("Internal_Server_Error"));
       }
     } else {
       res.send(data);
@@ -113,18 +76,92 @@ export const update = (req, res) => {
   });
 };
 
-export const destroy = (req, res) => {
-  Question.delete(req.params.id, (err, data) => {
+export const update = (req, res, next) => {
+  const questionData = new Question(req.body);
+  Classroom.findById(req.params.classroomId, (err, classroom) => {
+    if (err) {
+      console.error("Error:", err);
+      return next(new Error("Internal_Server_Error"));
+    }
+
+    if (!classroom) {
+      return res.status(404).send({
+        message: `Not found classroom with id : ${req.params.classroomId}`,
+      });
+    }
+
+    if (req.userId !== classroom.owner_id) {
+      return next(new Error("Update_Question_Permission"));
+    }
+
+    Question.update(req.params.questionId, questionData, (err, data) => {
+      if (err) {
+        if (err.type === "not_found") {
+          res.status(404).send({
+            message: `Not found question with id : ${req.params.questionId}`,
+          });
+        } else {
+          console.log(err);
+          return next(new Error("Internal_Server_Error"));
+        }
+      } else {
+        res.send(data);
+      }
+    });
+  });
+};
+
+export const destroy = (req, res, next) => {
+  Classroom.findById(req.params.classroomId, (err, classroom) => {
+    if (err) {
+      console.error("Error:", err);
+      return next(new Error("Internal_Server_Error"));
+    }
+    if (!classroom) {
+      return res.status(404).send({
+        message: `Not found classroom with id : ${req.params.classroomId}`,
+      });
+    }
+    if (req.userId !== classroom.owner_id) {
+      return next(new Error("Update_Question_Permission"));
+    }
+    Question.delete(req.params.questionId, (err, data) => {
+      if (err) {
+        if (err.type === "not_found") {
+          res.status(404).send({
+            message: `Not found question with id : ${req.params.questionId}`,
+          });
+        } else {
+          return next(new Error("Internal_Server_Error"));
+        }
+      } else {
+        res.send({ msg: "Success delete question" });
+      }
+    });
+  });
+};
+
+export const findByQuizAndUser = (req, res, next) => {
+  const { quizId } = req.params;
+  const userId = req.userId;
+
+  Question.findByQuizAndUser(quizId, userId, (err, data) => {
     if (err) {
       if (err.type === "not_found") {
         res.status(404).send({
-          message: `Not found question with id : ${req.params.id}`,
+          message: `Not found questions for quiz ID: ${quizId} and user ID: ${userId}`,
         });
       } else {
-        res.status(500).send({ msg: "Exist some error" });
+        res.status(500).send({ msg: "Error retrieving questions" });
       }
     } else {
-      res.send({ msg: "Success delete question" });
+      const questions = data.map((question) => {
+        return {
+          ...question,
+          options: JSON.parse(question.options),
+        };
+      });
+      res.send(questions);
     }
   });
 };

@@ -34,6 +34,17 @@ Question.getAll = (result) => {
   });
 };
 
+Question.getAllByQuizId = (quizId, result) => {
+  sql.query(
+    `SELECT * FROM ${tableName} WHERE quiz_id = ?`,
+    [quizId],
+    (err, res) => {
+      if (err) result(err, null);
+      result(null, res);
+    }
+  );
+};
+
 Question.findById = (id, result) => {
   sql.query(`SELECT * FROM ${tableName} WHERE id = ${id}`, (err, res) => {
     if (err) {
@@ -41,7 +52,7 @@ Question.findById = (id, result) => {
       return;
     }
     if (res.length) {
-      result(null, res[0]);
+      result(null, res);
       return;
     }
     result({ type: "not_found" }, null);
@@ -83,4 +94,39 @@ Question.delete = (id, result) => {
     result(null, res);
   });
 };
+
+Question.findByQuizAndUser = (quizId, userId, result) => {
+  sql.query(
+    `SELECT q.id, q.question_text, q.options, q.answer_key 
+     FROM ${tableName} q
+     INNER JOIN Quizzez qz ON q.quiz_id = qz.id
+     INNER JOIN Classrooms c ON qz.classroom_id = c.id
+     WHERE (JSON_CONTAINS(c.student_id, CAST(? AS JSON), '$') = 1 OR c.owner_id = ?) AND q.quiz_id = ?`,
+    [userId, userId, quizId],
+    (err, res) => {
+      if (err) {
+        result(err, null);
+        return;
+      }
+      result(null, res);
+    }
+  );
+};
+
+Question.findAllQuestionId = (quizId, result) => {
+  sql.query(
+    `SELECT id FROM ${tableName} WHERE quiz_id = ?`,
+    [quizId],
+    (err, res) => {
+      if (err) {
+        console.error("Error while executing SQL query:", err);
+        result(err, null);
+        return;
+      }
+      const questionIds = res.map((question) => question.id);
+      result(null, questionIds);
+    }
+  );
+};
+
 export default Question;

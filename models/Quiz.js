@@ -39,6 +39,18 @@ Quiz.getAll = (result) => {
   });
 };
 
+Quiz.getAllPublicQuiz = (result) => {
+  sql.query(`SELECT * FROM ${tableName} WHERE is_public = 1`, (err, res) => {
+    if (err) {
+      console.log("Error while getting public quizzes:", err);
+      result(err, null);
+      return;
+    }
+    console.log("Public Quiz data:", res);
+    result(null, res);
+  });
+};
+
 Quiz.findById = (id, result) => {
   sql.query(`SELECT * FROM ${tableName} WHERE id = ${id}`, (err, res) => {
     if (err) {
@@ -51,6 +63,19 @@ Quiz.findById = (id, result) => {
     }
     result({ type: "not_found" }, null);
   });
+};
+
+Quiz.findByUserId = (user_id, result) => {
+  sql.query(
+    `SELECT * FROM ${tableName} WHERE classroom_id IN (SELECT id FROM Classrooms WHERE owner_id = ${user_id} OR JSON_CONTAINS(student_id, CAST(${user_id} AS JSON)))`,
+    (err, res) => {
+      if (err) {
+        result(err, null);
+        return;
+      }
+      result(null, res);
+    }
+  );
 };
 
 Quiz.update = (id, data, result) => {
@@ -86,6 +111,22 @@ Quiz.delete = (id, result) => {
     }
     result(null, res);
   });
+};
+
+Quiz.findAllQuestionId = (quizId, result) => {
+  sql.query(
+    `SELECT id FROM ${tableName} WHERE quiz_id = ?`,
+    [quizId],
+    (err, res) => {
+      if (err) {
+        console.error("Error while executing SQL query:", err);
+        result(err, null);
+        return;
+      }
+      const questionIds = res.map((question) => question.id);
+      result(null, questionIds);
+    }
+  );
 };
 
 export default Quiz;

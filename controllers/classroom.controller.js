@@ -57,8 +57,7 @@ export const findAll = async (req, res, next) => {
                         `Error fetching user with ID ${studentId}:`,
                         error
                       );
-                      // return next(new Error("Internal_Server_Error"));
-                      return { id: studentId, message: "not found" }; // tidak lanjutkan ke error handler, tapi tambahkan objek dengan pesan
+                      return { id: studentId, message: "not found" };
                     }
                   })
                 )
@@ -98,14 +97,14 @@ export const findOne = async (req, res, next) => {
     Classroom.findById(req.params.id, async (err, data) => {
       if (err) {
         if (err.type === "not_found") {
-          res.status(404).send({
+          return next({
+            status: 404,
             message: `Not found classroom with id : ${req.params.id}`,
           });
         } else {
           return next(new Error("Internal_Server_Error"));
         }
       } else {
-        // Pengecekan apakah student_id tidak null
         const studentIds = data.student_id ? JSON.parse(data.student_id) : [];
 
         // get data student jika student_id tidak null
@@ -167,36 +166,92 @@ export const findOne = async (req, res, next) => {
   }
 };
 
-export const update = (req, res, next) => {
-  const classroomData = new Classroom(req.body);
-  Classroom.update(req.params.id, classroomData, (err, data) => {
-    if (err) {
-      if (err.type === "not_found") {
-        res.status(404).send({
-          message: `Not found classroom with id : ${req.params.id}`,
-        });
-      } else {
-        return next(new Error("Internal_Server_Error"));
+export const findByUserId = async (req, res, next) => {
+  try {
+    const user_id = req.userId;
+    Classroom.findByUserId(user_id, (err, data) => {
+      if (err) {
+        return next(err);
       }
-    } else {
       res.send(data);
+    });
+  } catch (error) {
+    console.log("Error:", error);
+    return next(new Error("Internal_Server_Error"));
+  }
+};
+
+export const update = (req, res, next) => {
+  const userId = req.userId;
+  const classroomId = req.params.classroomId;
+
+  Classroom.findById(classroomId, (err, data) => {
+    if (err) {
+      console.log("Error:", err);
+      return next(new Error("Internal_Server_Error"));
     }
+
+    if (!data) {
+      return res.status(404).send({
+        message: `Not found classroom with id : ${classroomId}`,
+      });
+    }
+
+    const ownerId = data.owner_id;
+
+    if (userId !== ownerId) {
+      return next(new Error("Update_Classroom_Permission"));
+    }
+    const classroomData = new Classroom(req.body);
+    Classroom.update(classroomId, classroomData, (err, data) => {
+      if (err) {
+        if (err.type === "not_found") {
+          res.status(404).send({
+            message: `Not found classroom with id : ${classroomId}`,
+          });
+        } else {
+          return next(new Error("Internal_Server_Error"));
+        }
+      } else {
+        res.send(data);
+      }
+    });
   });
 };
 
 export const destroy = (req, res, next) => {
-  Classroom.delete(req.params.id, (err, data) => {
+  const userId = req.userId;
+  const classroomId = req.params.classroomId;
+
+  Classroom.findById(classroomId, (err, data) => {
     if (err) {
-      if (err.type === "not_found") {
-        res.status(404).send({
-          message: `Not found classroom with id : ${req.params.id}`,
-        });
-      } else {
-        return next(new Error("Internal_Server_Error"));
-      }
-    } else {
-      res.send({ msg: "Success delete classroom" });
+      console.log("Error:", err);
+      return next(new Error("Internal_Server_Error"));
     }
+
+    if (!data) {
+      return res.status(404).send({
+        message: `Not found classroom with id : ${classroomId}`,
+      });
+    }
+
+    const ownerId = data.owner_id;
+    if (userId !== ownerId) {
+      return next(new Error("Update_Classroom_Permission"));
+    }
+    Classroom.delete(classroomId, (err, data) => {
+      if (err) {
+        if (err.type === "not_found") {
+          res.status(404).send({
+            message: `Not found classroom with id : ${classroomId}`,
+          });
+        } else {
+          return next(new Error("Internal_Server_Error"));
+        }
+      } else {
+        res.send({ msg: "Success delete classroom" });
+      }
+    });
   });
 };
 
@@ -205,28 +260,23 @@ export const join = (req, res, next) => {
   const user_id = req.userId;
 
   if (!join_code || !user_id) {
-    return res
-      .status(400)
-      .send({ message: "Join code and user ID are required." });
+    return next(new Error("JoinCode_And_UserID_Required"));
   }
 
   Classroom.join(join_code, user_id, (err, data) => {
     if (err) {
-      if (err.type === "invalid_join_code") {
-        console.log(join_code);
-        console.log(user_id);
-        return res.status(400).send({ message: "Invalid join code" });
-      } else if (err.type === "user_already_joined") {
-        return res
-          .status(400)
-          .send({ message: "User already joined this classroom." });
-      } else if (err.type === "invalid_student_id_format") {
-        return res
-          .status(500)
-          .send({ message: "Invalid format for student IDs" });
+      console.log(err);
+      if (err.message === "Invalid_Join_Code") {
+        return next(new Error(err.message));
+      } else if (err.message === "user_already_joined") {
+        return next(new Error(err.message));
+      } else if (err.message === "invalid_student_id_format") {
+        return next(new Error(err.message));
+      } else if (err.message === "Owner_Cannot_Join") {
+        return next(new Error(err.message));
       } else {
         console.log(err);
-        return next(new Error("Error_Disini_Woy"));
+        return next(new Error("Internal_Server_Error"));
       }
     } else {
       res.send(data);

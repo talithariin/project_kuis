@@ -39,14 +39,25 @@ Classroom.findById = (id, result) => {
       result(err, null);
       return;
     }
-    // jika data ditemukan
     if (res.length) {
       result(null, res[0]);
       return;
     }
-    // jika kosong
     result({ type: "not_found" }, null);
   });
+};
+
+Classroom.findByUserId = (user_id, result) => {
+  sql.query(
+    `SELECT * FROM ${tableName} WHERE owner_id = ${user_id} OR JSON_CONTAINS(student_id, CAST(${user_id} AS JSON))`,
+    (err, res) => {
+      if (err) {
+        result(err, null);
+        return;
+      }
+      result(null, res);
+    }
+  );
 };
 
 Classroom.update = (id, data, result) => {
@@ -84,55 +95,82 @@ Classroom.delete = (id, result) => {
 };
 
 Classroom.join = (join_code, userId, result) => {
+  // memeriksa apakah user_id adalah owner_id
   sql.query(
-    `SELECT * FROM ${tableName} WHERE join_code = ?`,
+    `SELECT owner_id FROM ${tableName} WHERE join_code = ?`,
     join_code,
     (err, res) => {
       if (err) {
         result(err, null);
         return;
       }
-      // jika tidak ada kelas dengan join_code yang diminta
       if (res.length === 0) {
-        console.log("Class not found for join_code:", join_code);
-        result({ type: "invalid_join_code" }, null);
+        result({ success: false, message: "Invalid_Join_Code" }, null);
         return;
       }
-      console.log("Results of class search:", res);
-      // mengambil hasil pertama dari res yang join_code nya sesuai
-      const classroom = res[0];
-      let studentIds = [];
-      try {
-        studentIds = JSON.parse(classroom.student_id);
-      } catch (error) {
-        console.log("Error while parsing student_id:", error);
-        result({ type: "invalid_student_id_format" }, null);
-        return;
-      }
+      const ownerId = res[0].owner_id;
 
-      // cek apakah student_id sudah ada
-      if (studentIds.includes(userId)) {
-        console.log("User has joined this class:", userId);
-        result({ type: "user_already_joined" }, null);
+      if (ownerId === userId) {
+        result({ success: false, message: "Owner_Cannot_Join" }, null);
         return;
       }
-
-      studentIds.push(userId);
       sql.query(
-        `UPDATE ${tableName} SET student_id = ? WHERE join_code = ?`,
-        [JSON.stringify(studentIds), join_code],
+        `SELECT student_id FROM ${tableName} WHERE join_code = ?`,
+        join_code,
         (err, res) => {
           if (err) {
             result(err, null);
             return;
           }
-
-          if (res.affectedRows === 0) {
-            result({ type: "not_found" }, null);
+          // jika tidak ada kelas dengan join_code yang diminta
+          if (res.length === 0) {
+            console.log("Class not found for join_code:", join_code);
+            result({ success: false, message: "Invalid_Join_Code" }, null);
             return;
           }
-          console.log("User successfully joined the class");
-          result(null, { join_code: join_code, student_id: studentIds });
+          console.log("Results of class search:", res);
+          // mengambil hasil pertama dari res yang join_code nya sesuai
+          const classroom = res[0];
+          let studentIds = [];
+          try {
+            studentIds = JSON.parse(classroom.student_id);
+          } catch (error) {
+            console.log("Error while parsing student_id:", error);
+            result(
+              { success: false, message: "Invalid_Format_StudentID" },
+              null
+            );
+            return;
+          }
+
+          // cek apakah student_id sudah ada
+          if (studentIds.includes(userId)) {
+            console.log("User has joined this class:", userId);
+            result(
+              { success: false, message: "User_Already_Joined_Classroom" },
+              null
+            );
+            return;
+          }
+
+          studentIds.push(userId);
+          sql.query(
+            `UPDATE ${tableName} SET student_id = ? WHERE join_code = ?`,
+            [JSON.stringify(studentIds), join_code],
+            (err, res) => {
+              if (err) {
+                result(err, null);
+                return;
+              }
+
+              if (res.affectedRows === 0) {
+                result({ success: false, message: "not_found" }, null);
+                return;
+              }
+              console.log("User successfully joined the class");
+              result(null, { join_code: join_code, student_id: studentIds });
+            }
+          );
         }
       );
     }

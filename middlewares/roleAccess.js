@@ -6,6 +6,8 @@ const roleAccess = (userRole, endpoint, method, userId) => {
       "/": ["GET", "POST", "PUT", "DELETE"],
       "/quiz/": ["GET", "POST", "PUT", "DELETE"],
       "/question/": ["GET", "POST", "PUT", "DELETE"],
+      "/answer/": ["POST", "PUT"],
+      "/result/": ["POST", "GET"],
     },
     admin: {
       "/profile/": ["GET", "PUT", "DELETE"],
@@ -13,13 +15,16 @@ const roleAccess = (userRole, endpoint, method, userId) => {
       "/": ["GET"],
       "/quiz/": ["GET"],
       "/question/": ["GET"],
+      "/result/": ["GET"],
     },
     user: {
       "/profile/": ["GET", "PUT", "DELETE"],
-      "/classroom/": ["GET", "POST", "PUT"],
+      "/classroom/": ["GET", "POST", "PUT", "DELETE"],
       "/": ["GET"],
-      "/quiz/": ["GET", "POST"],
-      "/question/": ["GET"],
+      "/quiz/": ["GET", "POST", "PUT", "DELETE"],
+      "/question/": ["GET", "POST", "PUT", "DELETE"],
+      "/answer/": ["POST", "PUT"],
+      "/result/": ["POST", "GET"],
     },
   };
 

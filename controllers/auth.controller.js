@@ -37,8 +37,6 @@ export const login = (req, res, next) => {
       }
     );
     res.json({ token });
-    // req.user = { token };
-    // next();
   });
 };
 
