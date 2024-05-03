@@ -43,6 +43,10 @@ const errorHandler = (err, req, res, next) => {
       statusCode = 403;
       message = "Invalid token";
       break;
+    case "Classroom_Permission":
+      statusCode = 403;
+      message = "You do not have permission to this class";
+      break;
     case "Update_Classroom_Permission":
       statusCode = 403;
       message = "You do not have permission to update & delete this class";

@@ -1,4 +1,5 @@
 import sql from "./connection.js";
+import pool from "../models/connection.js";
 
 const Result = function (result) {
   this.user_id = result.user_id;
@@ -9,43 +10,47 @@ const Result = function (result) {
 
 const tableName = "Result";
 
-Result.postResult = (newResult, result) => {
-  const { user_id, quiz_id, score, classroom_id } = newResult;
-  const values = [user_id, quiz_id, score, classroom_id];
-  const query = classroom_id
-    ? `INSERT INTO ${tableName} (user_id, quiz_id, score, classroom_id) VALUES (?, ?, ?, ?)`
-    : `INSERT INTO ${tableName} (user_id, quiz_id, score) VALUES (?, ?, ?)`;
-
-  sql.query(query, values, (err, res) => {
-    if (err) {
-      console.log("Error saat melakukan query:", err);
-      result(err, null);
-    } else {
-      console.log("Data berhasil dimasukkan:", res);
-      result(null, { id: res.insertId, ...newResult });
+Result.postResult = async (newResult) => {
+  let connection;
+  try {
+    connection = await pool.getConnection();
+    const { user_id, quiz_id, score, classroom_id } = newResult;
+    const [result] = await connection.execute(
+      `INSERT INTO ${tableName} (user_id, quiz_id, score, classroom_id) VALUES (?, ?, ?, ?)`,
+      [user_id, quiz_id, score, classroom_id]
+    );
+    console.log("Data is successfully entered", result);
+    return { id: result.insertId, ...newResult };
+  } catch (err) {
+    console.error("Error saat melakukan query:", err);
+    throw err;
+  } finally {
+    if (connection) {
+      connection.release();
     }
-  });
+  }
 };
 
-Result.getRank = (data, result) => {
-  const { classroomId, quizId } = data;
-  const values = classroomId ? [classroomId, quizId] : [quizId];
+Result.getRank = async (data) => {
+  try {
+    const { classroomId, quizId } = data;
+    const values = classroomId ? [classroomId, quizId] : [quizId];
 
-  const query = classroomId
-    ? `SELECT * FROM ${tableName} WHERE classroom_id = ? AND quiz_id = ? ORDER BY score DESC`
-    : `SELECT * FROM ${tableName} WHERE quiz_id = ? ORDER BY score DESC`;
+    const query = classroomId
+      ? `SELECT * FROM ${tableName} WHERE classroom_id = ? AND quiz_id = ? ORDER BY score DESC`
+      : `SELECT * FROM ${tableName} WHERE quiz_id = ? ORDER BY score DESC`;
 
-  sql.query(query, values, (err, res) => {
-    if (err) {
-      result(err, null);
-      return;
-    }
-    if (res.length) {
-      result(null, res);
+    // Eksekusi query menggunakan sql.execute
+    const [rows] = await sql.execute(query, values);
+    if (rows.length) {
+      return rows;
     } else {
-      result({ type: "not_found" }, null);
+      throw { type: "not_found" };
     }
-  });
+  } catch (err) {
+    console.error("Error saat melakukan query:", err);
+    throw err;
+  }
 };
 
 export default Result;

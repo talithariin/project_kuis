@@ -8,125 +8,123 @@ const Quiz = function (quiz) {
 
 const tableName = "Quizzez";
 
-Quiz.create = (newQuiz, result) => {
-  const { name, is_public, classroom_id } = newQuiz;
-  console.log("Data yang akan dimasukkan:", name, is_public, classroom_id);
-  const values = [name, is_public, classroom_id];
-  sql.query(
-    `INSERT INTO ${tableName} (name, is_public, classroom_id) VALUES (?, ?, ?)`,
-    values,
-    (err, res) => {
-      if (err) {
-        console.log("Error saat melakukan query:", err);
-        result(err, null);
-      } else {
-        console.log("Data berhasil dimasukkan:", res);
-        result(null, { id: res.insertId, ...newQuiz });
-      }
-    }
-  );
+Quiz.create = async (newQuiz) => {
+  try {
+    const { name, is_public, classroom_id } = newQuiz;
+    const values = [name, is_public, classroom_id];
+    const [res] = await sql.execute(
+      `INSERT INTO ${tableName} (name, is_public, classroom_id) VALUES (?, ?, ?)`,
+      values
+    );
+    return { id: res.insertId, ...newQuiz };
+  } catch (error) {
+    console.log("Error while querying", error);
+    throw error;
+  }
 };
 
-Quiz.getAll = (result) => {
-  sql.query(`SELECT * FROM ${tableName}`, (err, res) => {
-    if (err) {
-      console.log("Error while getting quiz:", err);
-      result(err, null);
-      return;
-    }
-    console.log("Quiz data:", res);
-    result(null, res);
-  });
+Quiz.getAll = async () => {
+  try {
+    const [rows] = await sql.execute(`SELECT * FROM ${tableName}`);
+    return rows;
+  } catch (error) {
+    console.log("Error while getting quiz:", error);
+    throw error;
+  }
 };
 
-Quiz.getAllPublicQuiz = (result) => {
-  sql.query(`SELECT * FROM ${tableName} WHERE is_public = 1`, (err, res) => {
-    if (err) {
-      console.log("Error while getting public quizzes:", err);
-      result(err, null);
-      return;
-    }
-    console.log("Public Quiz data:", res);
-    result(null, res);
-  });
+Quiz.getAllPublicQuiz = async () => {
+  try {
+    const [rows] = await sql.execute(
+      `SELECT * FROM ${tableName} WHERE is_public = 1`
+    );
+    return rows;
+  } catch (error) {
+    console.log("Error while getting public quizzes:", error);
+    throw error;
+  }
 };
 
-Quiz.findById = (id, result) => {
-  sql.query(`SELECT * FROM ${tableName} WHERE id = ${id}`, (err, res) => {
-    if (err) {
-      result(err, null);
-      return;
-    }
+Quiz.findById = async (id) => {
+  try {
+    const [res] = await sql.execute(`SELECT * FROM ${tableName} WHERE id = ?`, [
+      id,
+    ]);
+
     if (res.length) {
-      result(null, res[0]);
-      return;
+      return res[0];
+    } else {
+      throw { type: "not_found" };
     }
-    result({ type: "not_found" }, null);
-  });
+  } catch (error) {
+    console.log("Error while querying:", error);
+    throw error;
+  }
 };
 
-Quiz.findByUserId = (user_id, result) => {
-  sql.query(
-    `SELECT * FROM ${tableName} WHERE classroom_id IN (SELECT id FROM Classrooms WHERE owner_id = ${user_id} OR JSON_CONTAINS(student_id, CAST(${user_id} AS JSON)))`,
-    (err, res) => {
-      if (err) {
-        result(err, null);
-        return;
-      }
-      result(null, res);
-    }
-  );
+Quiz.findByUserId = async (user_id) => {
+  try {
+    const [rows] = await sql.execute(
+      `
+      SELECT * FROM ${tableName} 
+      WHERE classroom_id IN (
+        SELECT id FROM Classrooms 
+        WHERE owner_id = ? 
+        OR JSON_CONTAINS(student_id, CAST(? AS JSON))
+      )`,
+      [user_id, user_id]
+    );
+    return rows;
+  } catch (error) {
+    throw error;
+  }
 };
 
-Quiz.update = (id, data, result) => {
-  sql.query(
-    `UPDATE ${tableName} SET name = ? WHERE id = ?`,
-    [data.name, id],
-    (err, res) => {
-      if (err) {
-        result(err, null);
-        return;
-      }
+Quiz.update = async (id, data) => {
+  try {
+    const [res] = await sql.execute(
+      `UPDATE ${tableName} SET name = ? WHERE id = ?`,
+      [data.name, id]
+    );
 
-      if (res.affectedRows == 0) {
-        result({ type: "not_found" }, null);
-        return;
-      }
-
-      result(null, { id: id, data });
+    if (res.affectedRows === 0) {
+      throw { type: "not_found" };
     }
-  );
+
+    return { id: id, data };
+  } catch (error) {
+    throw error;
+  }
 };
 
-Quiz.delete = (id, result) => {
-  sql.query(`DELETE FROM ${tableName} WHERE id = ?`, id, (err, res) => {
-    if (err) {
-      result(err, null);
-      return;
+Quiz.delete = async (id) => {
+  try {
+    const [res] = await sql.execute(`DELETE FROM ${tableName} WHERE id = ?`, [
+      id,
+    ]);
+
+    if (res.affectedRows === 0) {
+      throw { type: "not_found" };
     }
 
-    if (res.affectedRows == 0) {
-      result({ type: "not_found" }, null);
-      return;
-    }
-    result(null, res);
-  });
+    return res;
+  } catch (error) {
+    throw error;
+  }
 };
 
-Quiz.findAllQuestionId = (quizId, result) => {
-  sql.query(
-    `SELECT id FROM ${tableName} WHERE quiz_id = ?`,
-    [quizId],
-    (err, res) => {
-      if (err) {
-        console.error("Error while executing SQL query:", err);
-        result(err, null);
-        return;
-      }
-      const questionIds = res.map((question) => question.id);
-      result(null, questionIds);
-    }
-  );
+Quiz.findAllQuestionId = async (quizId) => {
+  try {
+    const [rows] = await sql.execute(
+      `SELECT id FROM ${tableName} WHERE quiz_id = ?`,
+      [quizId]
+    );
+
+    const questionIds = rows.map((question) => question.id);
+    return questionIds;
+  } catch (error) {
+    throw error;
+  }
 };
 
 export default Quiz;

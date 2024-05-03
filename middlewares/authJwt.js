@@ -19,15 +19,7 @@ const authJwt = (req, res, next) => {
     // console.log(`Req original Url ${req.originalUrl}`);
     // console.log(`Req url ${req.url}`);
 
-    if (
-      !roleAccess(
-        decoded.role,
-        req.originalUrl,
-        req.method,
-        req.userId,
-        req.url
-      )
-    ) {
+    if (!roleAccess(decoded.role, req.originalUrl, req.method, req.userId)) {
       return next(new Error("Unauthorized_Access"));
     }
     next();

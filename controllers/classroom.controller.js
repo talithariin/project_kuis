@@ -2,126 +2,43 @@ import Classroom from "../models/Classroom.js";
 import generateJoinCode from "../services/join_code.js";
 import User from "../models/User.js";
 
-export const create = (req, res, next) => {
-  const newClassroom = new Classroom({
-    name: req.body.name,
-    join_code: generateJoinCode(),
-    owner_id: req.userId,
-  });
+export const create = async (req, res, next) => {
+  try {
+    const newClassroom = {
+      name: req.body.name,
+      join_code: generateJoinCode(),
+      owner_id: req.userId,
+    };
 
-  Classroom.create(newClassroom, (err, data) => {
-    if (err) {
-      console.log(err);
-      return next(new Error("Internal_Server_Error"));
-    }
-    res.send({ join_code: newClassroom.join_code });
-  });
+    const classroomData = await Classroom.create(newClassroom);
+
+    res.send({ join_code: classroomData.join_code });
+  } catch (error) {
+    console.log(error);
+    next(new Error("Internal_Server_Error"));
+  }
 };
 
 export const findAll = async (req, res, next) => {
   try {
-    Classroom.getAll(async (err, classrooms) => {
-      if (err) {
-        console.log(err);
-        return next(new Error("Internal_Server_Error"));
-      }
+    const classrooms = await Classroom.getAll();
+    const classroomsStudentsOwner = await Promise.all(
+      classrooms.map(async (classroom) => {
+        let studentIds = null;
 
-      // memisahkan student_id menjadi int tunggal
-      const classroomsStudentsOwner = await Promise.all(
-        classrooms.map(async (classroom) => {
-          // Pengecekan apakah student_id tidak null
-          const studentIds = classroom.student_id
-            ? JSON.parse(classroom.student_id)
-            : [];
-
-          // get data student jika student_id tidak null
-          const students =
-            studentIds.length > 0
-              ? await Promise.all(
-                  studentIds.map(async (studentId) => {
-                    try {
-                      const student = await new Promise((resolve, reject) => {
-                        User.findById(studentId, (err, user) => {
-                          if (err) {
-                            reject(err);
-                          } else {
-                            resolve(user);
-                          }
-                        });
-                      });
-                      return student
-                        ? student
-                        : { id: studentId, message: "not found" };
-                    } catch (error) {
-                      console.log(
-                        `Error fetching user with ID ${studentId}:`,
-                        error
-                      );
-                      return { id: studentId, message: "not found" };
-                    }
-                  })
-                )
-              : [];
-
-          // get data owner
-          const owner = await new Promise((resolve, reject) => {
-            User.findById(classroom.owner_id, (err, user) => {
-              if (err) {
-                reject(err);
-              } else {
-                resolve(user);
-              }
-            });
-          });
-          return {
-            id: classroom.id,
-            name: classroom.name,
-            join_code: classroom.join_code,
-            owner_id: classroom.owner_id,
-            owner,
-            student_id: classroom.student_id,
-            students,
-          };
-        })
-      );
-      res.send(classroomsStudentsOwner);
-    });
-  } catch (error) {
-    console.log("Error:", error);
-    return next(new Error("Internal_Server_Error"));
-  }
-};
-
-export const findOne = async (req, res, next) => {
-  try {
-    Classroom.findById(req.params.id, async (err, data) => {
-      if (err) {
-        if (err.type === "not_found") {
-          return next({
-            status: 404,
-            message: `Not found classroom with id : ${req.params.id}`,
-          });
-        } else {
-          return next(new Error("Internal_Server_Error"));
+        if (
+          classroom.student_id !== null &&
+          classroom.student_id !== undefined
+        ) {
+          studentIds = classroom.student_id;
         }
-      } else {
-        const studentIds = data.student_id ? JSON.parse(data.student_id) : [];
 
-        // get data student jika student_id tidak null
         const students =
-          studentIds.length > 0
+          studentIds !== null
             ? await Promise.all(
                 studentIds.map(async (studentId) => {
                   try {
-                    const student = await new Promise((resolve, reject) => {
-                      User.findById(studentId, (err, user) => {
-                        if (err) {
-                          reject(err);
-                        } else {
-                          resolve(user);
-                        }
-                      });
-                    });
+                    const student = await User.findById(studentId);
                     return student
                       ? student
                       : { id: studentId, message: "not found" };
@@ -136,150 +53,207 @@ export const findOne = async (req, res, next) => {
               )
             : [];
 
-        // get data owner
-        const owner = await new Promise((resolve, reject) => {
-          User.findById(data.owner_id, (err, user) => {
-            if (err) {
-              reject(err);
-            } else {
-              resolve(user);
-            }
-          });
-        });
+        const owner = await User.findById(classroom.owner_id);
 
-        const classroomExpanded = {
-          id: data.id,
-          name: data.name,
-          join_code: data.join_code,
-          owner_id: data.owner_id,
+        return {
+          id: classroom.id,
+          name: classroom.name,
+          join_code: classroom.join_code,
+          owner_id: classroom.owner_id,
           owner,
-          student_id: data.student_id,
+          student_id: classroom.student_id,
           students,
         };
+      })
+    );
 
-        res.send(classroomExpanded);
-      }
-    });
+    res.send(classroomsStudentsOwner);
   } catch (error) {
     console.log("Error:", error);
     return next(new Error("Internal_Server_Error"));
+  }
+};
+
+export const findOne = async (req, res, next) => {
+  try {
+    const classroom = await Classroom.findById(req.params.id);
+    if (!classroom) {
+      return next({
+        status: 404,
+        message: `Not found classroom with id : ${req.params.id}`,
+      });
+    }
+
+    let studentIds = null;
+    if (classroom.student_id !== null && classroom.student_id !== undefined) {
+      studentIds = classroom.student_id;
+    }
+
+    const students =
+      studentIds !== null
+        ? await Promise.all(
+            studentIds.map(async (studentId) => {
+              try {
+                const student = await User.findById(studentId);
+                return student
+                  ? student
+                  : { id: studentId, message: "not found" };
+              } catch (error) {
+                console.log(`Error fetching user with ID ${studentId}:`, error);
+                return { id: studentId, message: "not found" };
+              }
+            })
+          )
+        : [];
+
+    const owner = await User.findById(classroom.owner_id);
+
+    const classroomExpanded = {
+      id: classroom.id,
+      name: classroom.name,
+      join_code: classroom.join_code,
+      owner_id: classroom.owner_id,
+      owner,
+      student_id: classroom.student_id,
+      students,
+    };
+
+    res.send(classroomExpanded);
+  } catch (error) {
+    console.log("Error:", error);
+    if (error.type === "not_found") {
+      return res.status(404).send({
+        message: `Not found user with id : ${req.params.id}`,
+      });
+    } else {
+      return next(new Error("Internal_Server_Error"));
+    }
   }
 };
 
 export const findByUserId = async (req, res, next) => {
   try {
     const user_id = req.userId;
-    Classroom.findByUserId(user_id, (err, data) => {
-      if (err) {
-        return next(err);
-      }
-      res.send(data);
-    });
+    const data = await Classroom.findByUserId(user_id);
+    res.send(data);
+  } catch (error) {
+    if (error.type === "not_found") {
+      return res.status(404).send({
+        message: `Not found classroom with user id : ${req.userId}`,
+      });
+    } else {
+      return next(new Error("Internal_Server_Error"));
+    }
+  }
+};
+
+export const update = async (req, res, next) => {
+  const userId = req.userId;
+  const classroomId = req.params.classroomId;
+
+  try {
+    const classroom = await Classroom.findById(classroomId);
+
+    if (!classroom) {
+      return res.status(404).send({
+        message: `Not found classroom with id : ${classroomId}`,
+      });
+    }
+
+    const ownerId = classroom.owner_id;
+
+    if (userId !== ownerId) {
+      return next(new Error("Update_Classroom_Permission"));
+    }
+
+    const updatedClassroomData = {
+      name: req.body.name,
+    };
+
+    const updateResult = await Classroom.update(
+      classroomId,
+      updatedClassroomData
+    );
+
+    if (updateResult.affectedRows === 0) {
+      return res.status(404).send({
+        message: `Not found classroom with id : ${classroomId}`,
+      });
+    }
+
+    res.send({ id: classroomId, data: updatedClassroomData });
+  } catch (error) {
+    console.log("Error:", error.type);
+    if (error.type === "not_found") {
+      return res.status(404).send({
+        message: `Not found user with id : ${req.params.id}`,
+      });
+    } else {
+      return next(new Error("Internal_Server_Error"));
+    }
+  }
+};
+
+export const destroy = async (req, res, next) => {
+  const userId = req.userId;
+  const classroomId = req.params.classroomId;
+
+  try {
+    const classroom = await Classroom.findById(classroomId);
+
+    if (!classroom) {
+      return res.status(404).send({
+        message: `Not found classroom with id : ${classroomId}`,
+      });
+    }
+
+    const ownerId = classroom.owner_id;
+
+    if (userId !== ownerId) {
+      return next(new Error("Delete_Classroom_Permission"));
+    }
+
+    const deleteResult = await Classroom.delete(classroomId);
+
+    if (deleteResult.affectedRows === 0) {
+      return res.status(404).send({
+        message: `Not found classroom with id : ${classroomId}`,
+      });
+    }
+    res.send({ msg: "Success delete classroom" });
   } catch (error) {
     console.log("Error:", error);
     return next(new Error("Internal_Server_Error"));
   }
 };
 
-export const update = (req, res, next) => {
-  const userId = req.userId;
-  const classroomId = req.params.classroomId;
-
-  Classroom.findById(classroomId, (err, data) => {
-    if (err) {
-      console.log("Error:", err);
-      return next(new Error("Internal_Server_Error"));
-    }
-
-    if (!data) {
-      return res.status(404).send({
-        message: `Not found classroom with id : ${classroomId}`,
-      });
-    }
-
-    const ownerId = data.owner_id;
-
-    if (userId !== ownerId) {
-      return next(new Error("Update_Classroom_Permission"));
-    }
-    const classroomData = new Classroom(req.body);
-    Classroom.update(classroomId, classroomData, (err, data) => {
-      if (err) {
-        if (err.type === "not_found") {
-          res.status(404).send({
-            message: `Not found classroom with id : ${classroomId}`,
-          });
-        } else {
-          return next(new Error("Internal_Server_Error"));
-        }
-      } else {
-        res.send(data);
-      }
-    });
-  });
-};
-
-export const destroy = (req, res, next) => {
-  const userId = req.userId;
-  const classroomId = req.params.classroomId;
-
-  Classroom.findById(classroomId, (err, data) => {
-    if (err) {
-      console.log("Error:", err);
-      return next(new Error("Internal_Server_Error"));
-    }
-
-    if (!data) {
-      return res.status(404).send({
-        message: `Not found classroom with id : ${classroomId}`,
-      });
-    }
-
-    const ownerId = data.owner_id;
-    if (userId !== ownerId) {
-      return next(new Error("Update_Classroom_Permission"));
-    }
-    Classroom.delete(classroomId, (err, data) => {
-      if (err) {
-        if (err.type === "not_found") {
-          res.status(404).send({
-            message: `Not found classroom with id : ${classroomId}`,
-          });
-        } else {
-          return next(new Error("Internal_Server_Error"));
-        }
-      } else {
-        res.send({ msg: "Success delete classroom" });
-      }
-    });
-  });
-};
-
-export const join = (req, res, next) => {
+export const join = async (req, res, next) => {
   const { join_code } = req.body;
   const user_id = req.userId;
 
-  if (!join_code || !user_id) {
-    return next(new Error("JoinCode_And_UserID_Required"));
-  }
+  try {
+    if (!join_code || !user_id) {
+      throw new Error("JoinCode_And_UserID_Required");
+    }
 
-  Classroom.join(join_code, user_id, (err, data) => {
-    if (err) {
-      console.log(err);
-      if (err.message === "Invalid_Join_Code") {
-        return next(new Error(err.message));
-      } else if (err.message === "user_already_joined") {
-        return next(new Error(err.message));
-      } else if (err.message === "invalid_student_id_format") {
-        return next(new Error(err.message));
-      } else if (err.message === "Owner_Cannot_Join") {
-        return next(new Error(err.message));
+    const result = await Classroom.join(join_code, user_id);
+
+    if (result.success === false) {
+      if (
+        result.message === "Invalid_Join_Code" ||
+        result.message === "User_Already_Joined_Classroom" ||
+        result.message === "Invalid_Format_StudentID" ||
+        result.message === "Owner_Cannot_Join"
+      ) {
+        return next(new Error(result.message));
       } else {
-        console.log(err);
-        return next(new Error("Internal_Server_Error"));
+        throw new Error("Internal_Server_Error");
       }
     } else {
-      res.send(data);
+      res.send(result);
     }
-  });
+  } catch (error) {
+    console.log("Error:", error);
+    return next(new Error("Internal_Server_Error"));
+  }
 };

@@ -1,81 +1,82 @@
 import User from "../models/User.js";
+import bcrypt from "bcrypt";
 
 export const update = async (req, res, next) => {
-  const userExist = await new Promise((resolve, reject) => {
-    User.findByUsername(req.body.username, (err, data) => {
-      if (err) {
-        if (err.type === "not_found") {
-          resolve(false);
-        } else {
-          reject(err);
-        }
-      } else {
-        resolve(true);
-      }
-    });
-  });
+  try {
+    const id = req.params.id;
+    let data = req.body;
 
-  const updateData = {};
-  if (req.body.username) updateData.username = req.body.username;
-  if (req.body.email) updateData.email = req.body.email;
-  if (req.body.full_name) updateData.full_name = req.body.full_name;
-  if (req.body.address) updateData.address = req.body.address;
-  if (req.body.birthdate) updateData.birthdate = req.body.birthdate;
-
-  User.update(req.params.id, updateData, (err, data) => {
-    if (err) {
-      if (err.type === "not_found") {
-        return next(new Error("User_Not_Found"));
-      } else {
-        console.log(err);
-        return next(new Error("Internal_Server_Error"));
-      }
-    } else {
-      if (userExist) {
-        return next(new Error("Username_Already_Exist"));
-      }
-      res.send(data);
+    // Check if password field exists and encrypt it
+    if (data.password) {
+      const hashedPassword = await bcrypt.hash(data.password, 10);
+      data.password = hashedPassword;
     }
-  });
+
+    const updatedUser = await User.update(id, data);
+
+    res.send(updatedUser);
+  } catch (error) {
+    if (error.type === "not_found") {
+      return res.status(404).send({
+        message: `Not found user with id : ${req.params.id}`,
+      });
+    } else {
+      console.log(error);
+      next(new Error("Internal_Server_Error"));
+    }
+  }
 };
 
-export const findAll = (req, res, next) => {
-  User.getAll((err, data) => {
-    if (err) {
-      return next(new Error("Internal_Server_Error"));
-    }
+export const findAll = async (req, res, next) => {
+  try {
+    const data = await User.getAll();
     res.send(data);
-  });
+  } catch (error) {
+    next(new Error("Internal_Server_Error"));
+  }
 };
 
-export const findOne = (req, res, next) => {
-  User.findById(req.params.id, (err, data) => {
-    if (err) {
-      if (err.type === "not_found") {
-        return res.status(404).send({
-          message: `Not found user with id : ${req.params.id}`,
-        });
-      } else {
-        return next(new Error("Internal_Server_Error"));
-      }
-    } else {
-      res.send(data);
+export const findOne = async (req, res, next) => {
+  try {
+    const userData = await User.findById(req.params.id);
+    if (!userData) {
+      return res.status(404).send({
+        message: `Not found user with id : ${req.params.id}`,
+      });
     }
-  });
+    res.send(userData);
+  } catch (error) {
+    if (error.type === "not_found") {
+      return res.status(404).send({
+        message: `Not found user with id : ${req.params.id}`,
+      });
+    } else {
+      next(new Error("Internal_Server_Error"));
+    }
+  }
 };
 
-export const destroy = (req, res, next) => {
-  User.delete(req.params.id, (err, data) => {
-    if (err) {
-      if (err.type === "not_found") {
-        res.status(404).send({
-          message: `Not found user with id : ${req.params.id}`,
-        });
-      } else {
-        return next(new Error("Internal_Server_Error"));
-      }
-    } else {
-      res.send({ msg: "Success delete user" });
+export const destroy = async (req, res, next) => {
+  try {
+    const id = req.params.id;
+
+    const user = await User.findById(id);
+    if (!user) {
+      return res.status(404).send({
+        message: `Not found user with id : ${id}`,
+      });
     }
-  });
+
+    await User.delete(id);
+
+    res.status(200).send({ message: "User deleted successfully" });
+  } catch (error) {
+    if (error.type === "not_found") {
+      res.status(404).send({
+        message: `Not found user with id : ${req.params.id}`,
+      });
+    } else {
+      next(new Error("Internal_Server_Error"));
+    }
+  }
 };

@@ -10,77 +10,76 @@ const User = function (user) {
 };
 
 const tableName = "Users";
-
-User.create = (newUser, result) => {
-  sql.query(`INSERT INTO ${tableName} SET ?`, newUser, (err, res) => {
-    if (err) {
-      console.log("Error while querying:", err);
-      result(err, null);
-    } else {
-      console.log("Data is successfully entered", res);
-      result(null, { id: res.insertId, ...newUser });
-    }
-  });
-};
-
-User.getAll = (result) => {
-  sql.query(
-    `SELECT id, username, email, full_name, address, birthdate FROM ${tableName}`,
-    (err, res) => {
-      if (err) result(err, null);
-      result(null, res);
-    }
-  );
-};
-
-User.findById = (id, result) => {
-  sql.query(
-    `SELECT id, username, email, full_name, address, birthdate FROM ${tableName} WHERE id = ${id}`,
-    (err, res) => {
-      if (err) {
-        result(err, null);
-        return;
-      }
-      // jika data ditemukan
-      if (res.length) {
-        result(null, res[0]);
-        return;
-      }
-      // jika kosong
-      result({ type: "not_found" }, null);
-    }
-  );
-};
-
-User.update = (id, data, result) => {
-  let updateQuery = "UPDATE ?? SET ";
-  let queryParams = [tableName];
-  let updateFields = [];
-
-  for (let key in data) {
-    if (data.hasOwnProperty(key) && key !== "id") {
-      updateFields.push(`${key} = ?`);
-      queryParams.push(data[key]);
-    }
+User.create = async (newUser) => {
+  try {
+    const { username, email, password, full_name, address, birthdate } =
+      newUser;
+    const [result] = await sql.execute(
+      `INSERT INTO ${tableName} (username, email, password, full_name, address, birthdate) VALUES (?, ?, ?, ?, ?, ?)`,
+      [username, email, password, full_name, address, birthdate]
+    );
+    console.log("Data is successfully entered", result);
+    return { id: result.insertId, ...newUser };
+  } catch (error) {
+    console.log("Error while querying:", error);
+    throw error;
   }
+};
 
-  updateQuery += updateFields.join(", ");
-  updateQuery += " WHERE id = ?";
-  queryParams.push(id);
+User.getAll = async () => {
+  try {
+    const [rows] = await sql.execute(
+      `SELECT id, username, email, role, full_name, address, birthdate FROM ${tableName}`
+    );
+    return rows;
+  } catch (error) {
+    throw error;
+  }
+};
 
-  sql.query(updateQuery, queryParams, (err, res) => {
-    if (err) {
-      result(err, null);
-      return;
+User.findById = async (id) => {
+  try {
+    const [rows] = await sql.execute(
+      `SELECT id, username, email, full_name, address, birthdate FROM ${tableName} WHERE id = ?`,
+      [id]
+    );
+    if (rows.length) {
+      return rows[0];
+    } else {
+      throw { type: "not_found" };
     }
+  } catch (error) {
+    throw error;
+  }
+};
+
+User.update = async (id, data) => {
+  try {
+    let updateQuery = "UPDATE " + tableName + " SET ";
+    let queryParams = [];
+    let updateFields = [];
+
+    for (let key in data) {
+      if (data.hasOwnProperty(key) && key !== "id") {
+        updateFields.push(`${key} = ?`);
+        queryParams.push(data[key]);
+      }
+    }
+
+    updateQuery += updateFields.join(", ");
+    updateQuery += " WHERE id = ?";
+    queryParams.push(id);
+
+    const [res] = await sql.execute(updateQuery, queryParams);
 
     if (res.affectedRows == 0) {
-      result({ type: "not_found" }, null);
-      return;
+      throw { type: "not_found" };
     }
 
-    result(null, { id: id, data });
-  });
+    return { id: id, data };
+  } catch (error) {
+    throw error;
+  }
 };
 
 User.delete = (id, result) => {
@@ -98,22 +97,20 @@ User.delete = (id, result) => {
   });
 };
 
-User.findByUsername = (username, result) => {
-  sql.query(
-    `SELECT * FROM ${tableName} WHERE username = ?`,
-    [username], // Perubahan disini, username dikirim sebagai array
-    (err, res) => {
-      if (err) {
-        result(err, null);
-        return;
-      }
-      if (res.length) {
-        result(null, res[0]);
-        return;
-      }
-      result({ type: "not_found" }, null);
+User.findByUsername = async (username) => {
+  try {
+    const [rows] = await sql.execute(
+      `SELECT * FROM ${tableName} WHERE username = ?`,
+      [username]
+    );
+    if (rows.length) {
+      return rows[0];
+    } else {
+      return null;
     }
-  );
+  } catch (error) {
+    throw error;
+  }
 };
 
 export default User;

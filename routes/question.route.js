@@ -3,27 +3,24 @@ import {
   create,
   destroy,
   findAllByQuizId,
-  findByQuizAndUser,
   findOne,
   update,
 } from "../controllers/question.controller.js";
-import {
-  validateQuestionSchema,
-  validateUpdateQuestionSchema,
-} from "../middlewares/validators.js";
+import { validateQuestionSchema } from "../middlewares/validators.js";
 import classroomAccess from "../middlewares/classroomAccess.js";
 
 const questionRoute = Router();
 
 // POST ON PRIVATE QUIZ
 questionRoute.post(
-  "/:classroomId",
+  "/:classroomId/:quizId",
   classroomAccess,
   validateQuestionSchema,
   create
 );
 
 // POST ON PUBLIC QUIZ
+questionRoute.post("/:quizId", validateQuestionSchema, create);
 
 // find all question by quiz id
 questionRoute.get(
@@ -38,10 +35,9 @@ questionRoute.get("/:classroomId/:questionId", classroomAccess, findOne);
 questionRoute.put(
   "/:classroomId/:questionId",
   classroomAccess,
-  validateUpdateQuestionSchema,
+  validateQuestionSchema,
   update
 );
 questionRoute.delete("/:classroomId/:questionId", classroomAccess, destroy);
-questionRoute.get("/quiz/:quizId", classroomAccess, findByQuizAndUser);
 
 export default questionRoute;

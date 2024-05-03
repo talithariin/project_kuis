@@ -1,33 +1,33 @@
 import Classroom from "../models/Classroom.js";
 
 const classroomAccess = async (req, res, next) => {
-  const user_id = req.userId;
-  const classroom_id = req.params.classroomId;
   try {
-    Classroom.findById(classroom_id, (err, data) => {
-      if (err) {
-        if (err.type === "not_found") {
-          return res.status(404).send({
-            message: `Not found classroom with id : ${req.params.classroomId}`,
-          });
-        } else {
-          return res.status(500).send({ msg: "Exist some error" });
-        }
-      }
+    const user_id = req.userId;
+    const classroom_id = req.params.classroomId;
 
-      const studentId = data.student_id ? JSON.parse(data.student_id) : [];
-      const ownerId = data.owner_id;
-      if (user_id === ownerId || studentId.includes(user_id)) {
-        next();
-      } else {
-        return res.status(403).send({
-          message: "You do not have access to this class",
-        });
-      }
-    });
+    const classroom = await Classroom.findById(classroom_id);
+    let studentIds = null;
+
+    const ownerId = classroom.owner_id;
+    if (classroom.student_id !== null && classroom.student_id !== undefined) {
+      studentIds = classroom.student_id;
+    }
+
+    if (user_id === ownerId || studentIds.includes(user_id)) {
+      req.classroom = classroom;
+      next();
+    } else {
+      return next(new Error("Classroom_Permission"));
+    }
   } catch (error) {
     console.log("Error:", error);
-    return res.status(500).send({ msg: "Exist some error" });
+    if (error.type === "not_found") {
+      return res.status(404).send({
+        message: `Not found classroom with id : ${req.params.classroomId}`,
+      });
+    } else {
+      return next(new Error("Internal_Server_Error"));
+    }
   }
 };
 

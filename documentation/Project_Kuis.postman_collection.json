@@ -1,0 +1,684 @@
+{
+	"info": {
+		"_postman_id": "e1a5dcce-b5e0-4771-a345-b3c63b47d7b0",
+		"name": "Project_Kuis",
+		"schema": "https://schema.getpostman.com/json/collection/v2.0.0/collection.json",
+		"_exporter_id": "31287513"
+	},
+	"item": [
+		{
+			"name": "Authentication",
+			"item": [
+				{
+					"name": "Register",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "// username sudah terdaftar\n// superadmin\n{\n  \"username\": \"Taylor Swift\",\n  \"email\": \"taylor@student.ub.ac.id\",\n  \"password\": \"password123\",\n  \"full_name\": \"Taylor Swift\",\n  \"address\": \"Merjosari, Malang\",\n  \"birthdate\": \"2003-10-02\"\n}\n\n// Admin\n// {\n//   \"username\": \"testingAdmin\",\n//   \"email\": \"testingAdmin@gmail.com\",\n//   \"password\": \"password123\",\n//   \"full_name\": \"Testing Admin\",\n//   \"address\": \"Merjosari, Malang\",\n//   \"birthdate\": \"2003-10-02\"\n// }\n\n// User\n// {\n//   \"username\": \"testinguser\",\n//   \"email\": \"testinguser@gmail.com\",\n//   \"password\": \"testing123\",\n//   \"full_name\": \"Testing Role User\",\n//   \"address\": \"Lowokwaru, Malang\",\n//   \"birthdate\": \"2003-10-02\"\n// }",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": "{{base_url}}/auth/register"
+					},
+					"response": []
+				},
+				{
+					"name": "Login",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "// role superadmin\n{\n    \"username\": \"Taylor Swift\",\n    \"password\": \"password123\"\n}\n\n// role admin\n// {\n//     \"username\": \"testingAdmin\",\n//     \"password\": \"password123\"\n// }\n\n// role user\n// {\n//     \"username\": \"testinguser\",\n//     \"password\": \"testing123\"\n// }",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": "{{base_url}}/auth/login"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Profile",
+			"item": [
+				{
+					"name": "Update",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": {
+								"token": "{{token}}"
+							}
+						},
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"username\": \"Taylor Swift\",\n    \"email\": \"taylor_swift@student.ub.ac.id\",\n    \"full_name\": \"Taylor Swift\",\n    \"password\": \"password123\",\n    \"address\": \"Malang\",\n    \"birthdate\": \"2003-10-02\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": "{{base_url}}/profile/9"
+					},
+					"response": []
+				},
+				{
+					"name": "Get All User",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": {
+								"token": "{{token}}"
+							}
+						},
+						"method": "GET",
+						"header": [],
+						"url": "{{base_url}}/profile/"
+					},
+					"response": []
+				},
+				{
+					"name": "Get by User Id",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": {
+								"token": "{{token}}"
+							}
+						},
+						"method": "GET",
+						"header": [],
+						"url": "{{base_url}}/profile/10"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": {
+								"token": "{{token}}"
+							}
+						},
+						"method": "DELETE",
+						"header": [],
+						"url": "{{base_url}}/profile/11111"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Classroom",
+			"item": [
+				{
+					"name": "Create Classroom",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": {
+								"token": "{{token}}"
+							}
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Pemrograman Dasar\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": "{{base_url}}/classroom/"
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Classroom",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": {
+								"token": "{{token}}"
+							}
+						},
+						"method": "GET",
+						"header": [],
+						"url": "{{base_url}}/classroom/"
+					},
+					"response": []
+				},
+				{
+					"name": "Update classroom",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": {
+								"token": "{{token}}"
+							}
+						},
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Arsitektur Komputer Kelas A\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": "{{base_url}}/classroom/8"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Classroom",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": {
+								"token": "{{token}}"
+							}
+						},
+						"method": "DELETE",
+						"header": [],
+						"url": "{{base_url}}/classroom/8"
+					},
+					"response": []
+				},
+				{
+					"name": "Join Classroom",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": {
+								"token": "{{token}}"
+							}
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"join_code\": \"BZOFSCJ\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": "{{base_url}}/classroom/join"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Classroom by Id",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": {
+								"token": "{{token}}"
+							}
+						},
+						"method": "GET",
+						"header": [],
+						"url": "{{base_url}}/classroom/8"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Classroom by User Id",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": {
+								"token": "{{token}}"
+							}
+						},
+						"method": "GET",
+						"header": [],
+						"url": "{{base_url}}/classroom/usr/8"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Quiz",
+			"item": [
+				{
+					"name": "Add Public Quiz",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": {
+								"token": "{{token}}"
+							}
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Quiz Parampa\",\n    \"is_public\": false\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": "{{base_url}}/quiz/"
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Public Quiz",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": {
+								"token": "{{token}}"
+							}
+						},
+						"method": "GET",
+						"header": [],
+						"url": "{{base_url}}/quiz/public"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Quiz by Id",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": {
+								"token": "{{token}}"
+							}
+						},
+						"method": "GET",
+						"header": [],
+						"url": "{{base_url}}/quiz/1"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Quiz",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": {
+								"token": "{{token}}"
+							}
+						},
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"UTS GENAP 2024\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": "{{base_url}}/quiz/2/12"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Private Quiz",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": {
+								"token": "{{token}}"
+							}
+						},
+						"method": "DELETE",
+						"header": [],
+						"url": "{{base_url}}/quiz/13"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Quiz by Classroom Id & User Id",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": {
+								"token": "{{token}}"
+							}
+						},
+						"method": "GET",
+						"header": [],
+						"url": "{{base_url}}/quiz/usr/2"
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Quiz",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": {
+								"token": "{{token}}"
+							}
+						},
+						"method": "GET",
+						"header": [],
+						"url": "{{base_url}}/quiz/"
+					},
+					"response": []
+				},
+				{
+					"name": "Add Private Quiz",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": {
+								"token": "{{token}}"
+							}
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Quiz Parampoy\",\n    \"is_public\": false\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": "{{base_url}}/quiz/2"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Public Quiz",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": {
+								"token": "{{token}}"
+							}
+						},
+						"method": "DELETE",
+						"header": [],
+						"url": "{{base_url}}/quiz/2/12"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Question",
+			"item": [
+				{
+					"name": "Add Question to Private Quiz",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": {
+								"token": "{{token}}"
+							}
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"question_text\": \"Dalam usaha manusia mencari sumber makanan baru, ternyata Chlorella mendapat perhatian yang cukup besar. Hal ini dikarenakan Chlorella mempunyai kandungan protein yang tinggi sehingga berpotensi sebagai sumber protein sel tunggal (PST) dan bahan makanan. Chlorella diketahui mengandung beberapa jenis pigmen dan memiliki kemampuan untuk berfotosintesis. Chlorella termasuk dalam kelompok alga ...\",\n  \"options\": {\n    \"a\": \"Chlorophyta\",\n    \"b\": \"Phaeophyta\",\n    \"c\": \"Rhodophyta\",\n    \"d\": \"Cyanophyta\",\n    \"e\": \"Chrysophyta\"\n  },\n  \"answer_key\": \"a\"\n}\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": "{{base_url}}/question/2/14"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Question by Quiz Id",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": {
+								"token": "{{token}}"
+							}
+						},
+						"method": "GET",
+						"header": [],
+						"url": "{{base_url}}/2/quiz/14"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Question by Id",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": {
+								"token": "{{token}}"
+							}
+						},
+						"method": "GET",
+						"header": [],
+						"url": "{{base_url}}/question/2/15"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Question",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": {
+								"token": "{{token}}"
+							}
+						},
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"question_text\": \"Bentuk interaksi antara Mikoriza dengan akar tanaman merupakan bentuk simbiosis...\",\n  \"options\": {\n    \"a\": \"Mutualisme\",\n    \"b\": \"Komensalisme\",\n    \"c\": \"Netralisme\",\n    \"d\": \"Parasitisme\",\n    \"e\": \"Kompetisi\"\n  },\n  \"answer_key\": \"a\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": "{{base_url}}/question/2/14"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Question",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": {
+								"token": "{{token}}"
+							}
+						},
+						"method": "DELETE",
+						"header": [],
+						"url": "{{base_url}}/question/3/21"
+					},
+					"response": []
+				},
+				{
+					"name": "Add Question to Public Quiz",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": {
+								"token": "{{token}}"
+							}
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"question_text\": \"ALTRUISTIK = …\",\n  \"options\": {\n    \"a\": \"EGOIS\",\n    \"b\": \"DERMAWAN\",\n    \"c\": \"BAIK HATI\",\n    \"d\": \"PEDULI\",\n    \"e\": \"KASIHAN\"\n  },\n  \"answer_key\": \"a\"\n}\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": "{{base_url}}/question/5"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Answer",
+			"item": [
+				{
+					"name": "Add Answer by User Id & Question Id",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": {
+								"token": "{{token}}"
+							}
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"user_answer_option\": \"e\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": "{{base_url}}/answer/2/14"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Answer by User Id & Question Id",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": {
+								"token": "{{token}}"
+							}
+						},
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"user_answer_option\": \"a\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": "{{base_url}}/answer/2/14"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Result",
+			"item": [
+				{
+					"name": "Get Rank Private Quiz",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": {
+								"token": "{{token}}"
+							}
+						},
+						"method": "GET",
+						"header": [],
+						"url": "{{base_url}}/result/rank/2/1"
+					},
+					"response": []
+				},
+				{
+					"name": "Post Answer Public Quiz",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": {
+								"token": "{{token}}"
+							}
+						},
+						"method": "POST",
+						"header": [],
+						"url": "{{base_url}}/result/public/5"
+					},
+					"response": []
+				},
+				{
+					"name": "Post Answer Private Class",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": {
+								"token": "{{token}}"
+							}
+						},
+						"method": "POST",
+						"header": [],
+						"url": "{{base_url}}/result/private/2/14"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Rank Public Quiz",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": {
+								"token": "{{token}}"
+							}
+						},
+						"method": "GET",
+						"header": [],
+						"url": "{{base_url}}/result/rank/5"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Dashboard",
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": {
+						"token": "{{token}}"
+					}
+				},
+				"method": "GET",
+				"header": [],
+				"url": "{{base_url}}/"
+			},
+			"response": []
+		}
+	]
+}

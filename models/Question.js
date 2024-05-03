@@ -9,124 +9,131 @@ const Question = function (question) {
 
 const tableName = "Questions";
 
-Question.create = (newQuestion, result) => {
-  const { question_text, options, answer_key, quiz_id } = newQuestion;
-  const values = [question_text, JSON.stringify(options), answer_key, quiz_id];
-  sql.query(
-    `INSERT INTO ${tableName} (question_text, options, answer_key, quiz_id) VALUES (?, ?, ?, ?)`,
-    values,
-    (err, res) => {
-      if (err) {
-        console.log("Error saat melakukan query:", err);
-        result(err, null);
-      } else {
-        console.log("Data berhasil dimasukkan:", res);
-        result(null, { id: res.insertId, ...newQuestion });
-      }
-    }
-  );
+Question.create = async (newQuestion) => {
+  try {
+    const { question_text, options, answer_key, quiz_id } = newQuestion;
+    const values = [
+      question_text,
+      JSON.stringify(options),
+      answer_key,
+      quiz_id,
+    ];
+    const [res] = await sql.execute(
+      `INSERT INTO ${tableName} (question_text, options, answer_key, quiz_id) VALUES (?, ?, ?, ?)`,
+      values
+    );
+
+    console.log("Data berhasil dimasukkan:", res);
+    return { id: res.insertId, ...newQuestion };
+  } catch (error) {
+    console.log("Error saat melakukan query:", error);
+    throw error;
+  }
 };
 
-Question.getAll = (result) => {
-  sql.query(`SELECT * FROM ${tableName}`, (err, res) => {
-    if (err) result(err, null);
-    result(null, res);
-  });
+Question.getAll = async (result) => {
+  try {
+    const [rows] = await sql.execute(`SELECT * FROM ${tableName}`);
+    return rows;
+  } catch (error) {
+    throw error;
+  }
 };
 
-Question.getAllByQuizId = (quizId, result) => {
-  sql.query(
-    `SELECT * FROM ${tableName} WHERE quiz_id = ?`,
-    [quizId],
-    (err, res) => {
-      if (err) result(err, null);
-      result(null, res);
-    }
-  );
+Question.getAllByQuizId = async (quizId, result) => {
+  try {
+    const [rows] = await sql.execute(
+      `SELECT id, question_text, quiz_id, options FROM ${tableName} WHERE quiz_id = ?`,
+      [quizId]
+    );
+    return rows;
+  } catch (error) {
+    throw error;
+  }
 };
 
-Question.findById = (id, result) => {
-  sql.query(`SELECT * FROM ${tableName} WHERE id = ${id}`, (err, res) => {
-    if (err) {
-      result(err, null);
-      return;
+Question.findById = async (id) => {
+  try {
+    const [rows] = await sql.execute(
+      `SELECT * FROM ${tableName} WHERE id = ?`,
+      [id]
+    );
+    if (rows.length) {
+      return rows;
+    } else {
+      throw { type: "not_found" };
     }
-    if (res.length) {
-      result(null, res);
-      return;
-    }
-    result({ type: "not_found" }, null);
-  });
+  } catch (error) {
+    throw error;
+  }
 };
 
-Question.update = (id, data, result) => {
-  const optionsJSON = JSON.stringify(data.options);
-  sql.query(
-    `UPDATE ${tableName} SET question_text = ?, options = ?, answer_key= ? WHERE id = ?`,
-    [data.question_text, optionsJSON, data.answer_key, id],
-    (err, res) => {
-      if (err) {
-        result(err, null);
-        return;
-      }
+Question.update = async (id, data) => {
+  try {
+    const optionsJSON = JSON.stringify(data.options);
+    const [res] = await sql.execute(
+      `UPDATE ${tableName} SET question_text = ?, options = ?, answer_key= ? WHERE id = ?`,
+      [data.question_text, optionsJSON, data.answer_key, id]
+    );
 
-      if (res.affectedRows == 0) {
-        result({ type: "not_found" }, null);
-        return;
-      }
-
-      result(null, { id: id, data });
+    if (res.affectedRows === 0) {
+      throw { type: "not_found" };
     }
-  );
+
+    return { id: id, data };
+  } catch (error) {
+    throw error;
+  }
 };
 
-Question.delete = (id, result) => {
-  sql.query(`DELETE FROM ${tableName} WHERE id = ?`, id, (err, res) => {
-    if (err) {
-      result(err, null);
-      return;
+Question.delete = async (id) => {
+  try {
+    const [res] = await sql.execute(`DELETE FROM ${tableName} WHERE id = ?`, [
+      id,
+    ]);
+
+    if (res.affectedRows === 0) {
+      throw { type: "not_found" };
     }
 
-    if (res.affectedRows == 0) {
-      result({ type: "not_found" }, null);
-      return;
-    }
-    result(null, res);
-  });
+    return { msg: "Success delete question" };
+  } catch (error) {
+    throw error;
+  }
 };
 
-Question.findByQuizAndUser = (quizId, userId, result) => {
-  sql.query(
-    `SELECT q.id, q.question_text, q.options, q.answer_key 
-     FROM ${tableName} q
-     INNER JOIN Quizzez qz ON q.quiz_id = qz.id
-     INNER JOIN Classrooms c ON qz.classroom_id = c.id
-     WHERE (JSON_CONTAINS(c.student_id, CAST(? AS JSON), '$') = 1 OR c.owner_id = ?) AND q.quiz_id = ?`,
-    [userId, userId, quizId],
-    (err, res) => {
-      if (err) {
-        result(err, null);
-        return;
-      }
-      result(null, res);
-    }
-  );
+Question.findByQuizAndUser = async (quizId, userId) => {
+  try {
+    const [rows] = await sql.execute(
+      `SELECT q.id, q.question_text, q.options, q.answer_key 
+       FROM ${tableName} q
+       INNER JOIN Quizzes qz ON q.quiz_id = qz.id
+       INNER JOIN Classrooms c ON qz.classroom_id = c.id
+       WHERE (JSON_CONTAINS(c.student_id, CAST(? AS JSON), '$') = 1 OR c.owner_id = ?) AND q.quiz_id = ?`,
+      [userId, userId, quizId]
+    );
+    return rows;
+  } catch (error) {
+    throw error;
+  }
 };
 
-Question.findAllQuestionId = (quizId, result) => {
-  sql.query(
-    `SELECT id FROM ${tableName} WHERE quiz_id = ?`,
-    [quizId],
-    (err, res) => {
-      if (err) {
-        console.error("Error while executing SQL query:", err);
-        result(err, null);
-        return;
-      }
-      const questionIds = res.map((question) => question.id);
-      result(null, questionIds);
+Question.findAllQuestionId = async (quizId) => {
+  try {
+    const [res] = await sql.execute(
+      `SELECT id FROM ${tableName} WHERE quiz_id = ?`,
+      [quizId]
+    );
+
+    if (res.length === 0) {
+      throw { type: "not_found" };
     }
-  );
+
+    const questionIds = res.map((question) => question.id);
+    return questionIds;
+  } catch (error) {
+    throw error;
+  }
 };
 
 export default Question;

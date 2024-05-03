@@ -3,104 +3,84 @@ import Classroom from "../models/Classroom.js";
 import User from "../models/User.js";
 import { findOne as findClassroomById } from "./classroom.controller.js";
 
-export const createPrivateQuiz = (req, res, next) => {
+export const createPrivateQuiz = async (req, res, next) => {
   const userId = req.userId;
   const classroomId = req.params.classroomId;
 
-  Classroom.findById(classroomId, (err, data) => {
-    if (err) {
-      console.log("Error:", err);
-      return next(new Error("Internal_Server_Error"));
-    }
+  try {
+    const classroom = await Classroom.findById(classroomId);
 
-    if (!data) {
-      return res.status(404).send({
-        message: `Not found classroom with id : ${classroomId}`,
-      });
-    }
-
-    const ownerId = data.owner_id;
+    const ownerId = classroom.owner_id;
 
     if (userId !== ownerId) {
       return next(new Error("Create_Quiz_Permission"));
     }
 
-    const newQuiz = new Quiz({
+    const newQuiz = {
       name: req.body.name,
       is_public: false,
       classroom_id: classroomId,
-    });
+    };
 
-    Quiz.create(newQuiz, (err, data) => {
-      if (err) {
-        console.log(err);
-        return next(new Error("Internal_Server_Error"));
-      }
-      res.send(data);
-    });
-  });
+    const data = await Quiz.create(newQuiz);
+
+    res.send(data);
+  } catch (error) {
+    console.log("Error:", error);
+    if (error.type === "not_found") {
+      return res.status(404).send({
+        message: `Not found classroom with id : ${req.params.classroomId}`,
+      });
+    } else {
+      return next(new Error("Internal_Server_Error"));
+    }
+  }
 };
 
-export const createPublicQuiz = (req, res, next) => {
-  const newQuiz = new Quiz({
+export const createPublicQuiz = async (req, res, next) => {
+  const newQuiz = {
     name: req.body.name,
     is_public: true,
     classroom_id: null,
-  });
+  };
 
-  Quiz.create(newQuiz, (err, data) => {
-    if (err) {
-      console.log(err);
-      return next(new Error("Internal_Server_Error"));
-    }
+  try {
+    const data = await Quiz.create(newQuiz);
     res.send(data);
-  });
+  } catch (error) {
+    console.log(error);
+    return next(new Error("Internal_Server_Error"));
+  }
 };
 
 export const findAll = async (req, res, next) => {
   try {
-    Quiz.getAll(async (err, quizData) => {
-      if (err) {
-        console.log(err);
-        return next(new Error("Internal_Server_Error"));
-      }
+    const quizData = await Quiz.getAll();
 
-      const quizzesWithClassrooms = await Promise.all(
-        quizData.map(async (quiz) => {
-          try {
-            const classroom = await new Promise((resolve, reject) => {
-              findClassroomById(
-                { params: { id: quiz.classroom_id } },
-                { send: (classroomData) => resolve(classroomData) },
-                (err, classroomData) => {
-                  if (err) {
-                    reject(err);
-                  } else {
-                    resolve(classroomData);
-                  }
-                }
-              );
-            });
-            return {
-              id: quiz.id,
-              name: quiz.name,
-              is_public: quiz.is_public,
-              classroom,
-            };
-          } catch (error) {
-            console.log("Error fetching classroom data:", error);
-            return {
-              id: quiz.id,
-              name: quiz.name,
-              is_public: quiz.is_public,
-              classroom: null,
-            };
-          }
-        })
-      );
+    const quizzesWithClassrooms = await Promise.all(
+      quizData.map(async (quiz) => {
+        try {
+          const classroomData = await Classroom.findById(quiz.classroom_id);
+          const classroom = classroomData ? classroomData : null;
+          return {
+            id: quiz.id,
+            name: quiz.name,
+            is_public: quiz.is_public,
+            classroom,
+          };
+        } catch (error) {
+          console.log("Error fetching classroom data:", error);
+          return {
+            id: quiz.id,
+            name: quiz.name,
+            is_public: quiz.is_public,
+            classroom: null,
+          };
+        }
+      })
+    );
 
-      res.send(quizzesWithClassrooms);
-    });
+    res.send(quizzesWithClassrooms);
   } catch (error) {
     console.log("Error:", error);
     return next(new Error("Internal_Server_Error"));
@@ -109,100 +89,60 @@ export const findAll = async (req, res, next) => {
 
 export const findAllQuizPublic = async (req, res, next) => {
   try {
-    Quiz.getAllPublicQuiz((err, quizData) => {
-      if (err) {
-        if (err.type === "not_found") {
-          return next(new Error("Quiz_Not_Found"));
-        } else {
-          return next(new Error("Internal_Server_Error"));
-        }
-      }
+    const quizData = await Quiz.getAllPublicQuiz();
 
-      Promise.all(
-        quizData.map((quiz) => {
-          return new Promise(async (resolve, reject) => {
-            try {
-              const classroom = await new Promise((resolve, reject) => {
-                findClassroomById(
-                  { params: { id: quiz.classroom_id } },
-                  { send: (classroomData) => resolve(classroomData) },
-                  (err, classroomData) => {
-                    if (err) {
-                      reject(err);
-                    } else {
-                      resolve(classroomData);
-                    }
-                  }
-                );
-              });
-              resolve({
-                id: quiz.id,
-                name: quiz.name,
-                is_public: quiz.is_public,
-                classroom,
-              });
-            } catch (error) {
-              console.log("Error fetching classroom data:", error);
-              resolve({
-                id: quiz.id,
-                name: quiz.name,
-                is_public: quiz.is_public,
-                classroom: null,
-              });
-            }
-          });
-        })
-      )
-        .then((quizzesWithClassrooms) => {
-          res.send(quizzesWithClassrooms);
-        })
-        .catch((error) => {
-          console.log("Error:", error);
-          return next(new Error("Error_Fetching_Classroom"));
-        });
-    });
+    const quizzesWithClassrooms = await Promise.all(
+      quizData.map(async (quiz) => {
+        try {
+          const classroomData = await Classroom.findById(quiz.classroom_id);
+          const classroom = classroomData ? classroomData : null;
+          return {
+            id: quiz.id,
+            name: quiz.name,
+            is_public: quiz.is_public,
+            classroom,
+          };
+        } catch (error) {
+          console.log("Error fetching classroom data:", error);
+          return {
+            id: quiz.id,
+            name: quiz.name,
+            is_public: quiz.is_public,
+            classroom: null,
+          };
+        }
+      })
+    );
+
+    res.send(quizzesWithClassrooms);
   } catch (error) {
     console.log("Error:", error);
-    return next(new Error("Internal_Server_Error"));
+    if (error.type === "not_found") {
+      return next(new Error("Quiz_Not_Found"));
+    } else {
+      return next(new Error("Internal_Server_Error"));
+    }
   }
 };
 
 export const findOne = async (req, res, next) => {
   try {
-    Quiz.findById(req.params.id, async (err, quizData) => {
-      if (err) {
-        if (err.type === "not_found") {
-          res.status(404).send({
-            message: `Not found quiz with id : ${req.params.id}`,
-          });
-        } else {
-          return next(new Error("Internal_Server_Error"));
-        }
-      } else {
-        try {
-          const classroom = await new Promise((resolve, reject) => {
-            findClassroomById(
-              { params: { id: quizData.classroom_id } },
-              { send: (classroomData) => resolve(classroomData) },
-              (err, classroomData) => {
-                if (err) {
-                  reject(err);
-                } else {
-                  resolve(classroomData);
-                }
-              }
-            );
-          });
+    const quizData = await Quiz.findById(req.params.id);
+    console.log(quizData);
 
-          res.send({
-            ...quizData,
-            classroom,
-          });
-        } catch (error) {
-          console.log("Error fetching classroom data:", error);
-          return next(new Error("Internal_Server_Error"));
-        }
-      }
+    if (!quizData) {
+      return res.status(404).send({
+        message: `Not found quiz with id : ${req.params.id}`,
+      });
+    }
+
+    const classroomId = quizData.classroom_id;
+
+    const classroom = await Classroom.findById(classroomId);
+
+    res.send({
+      ...quizData,
+      classroom,
     });
   } catch (error) {
     console.log("Error:", error);
@@ -213,58 +153,43 @@ export const findOne = async (req, res, next) => {
 export const getQuizByUserId = async (req, res, next) => {
   try {
     const user_id = req.userId;
-    Quiz.findByUserId(user_id, async (err, data) => {
-      if (err) {
-        return next(err);
-      }
+    const quizData = await Quiz.findByUserId(user_id);
 
-      if (data.length === 0) {
-        res.send(data);
-        return;
-      }
+    if (quizData.length === 0) {
+      res.send(quizData);
+      return;
+    }
 
-      try {
-        const quizWithClassroom = await Promise.all(
-          data.map(async (quiz) => {
-            await Classroom.findById(
-              quiz.classroom_id,
-              (classroomErr, classroomData) => {
-                if (classroomErr) {
-                  throw classroomErr;
-                }
-                quiz.classroom = classroomData;
-              }
-            );
-            return quiz;
-          })
-        );
+    const quizWithClassroom = await Promise.all(
+      quizData.map(async (quiz) => {
+        try {
+          const classroomData = await Classroom.findById(quiz.classroom_id);
+          quiz.classroom = classroomData;
+          return quiz;
+        } catch (classroomErr) {
+          throw classroomErr;
+        }
+      })
+    );
 
-        res.send(quizWithClassroom);
-      } catch (error) {
-        console.log("Error:", error);
-        return next(new Error("Internal_Server_Error"));
-      }
-    });
+    res.send(quizWithClassroom);
   } catch (error) {
     console.log("Error:", error);
     return next(new Error("Internal_Server_Error"));
   }
 };
 
-export const update = (req, res, next) => {
-  const quizId = req.params.quizId;
-  const userId = req.userId;
-  const classroomId = req.params.classroomId;
+export const update = async (req, res, next) => {
+  try {
+    const quizId = req.params.quizId;
+    const userId = req.userId;
+    const classroomId = req.params.classroomId;
+    console.log(quizId, userId, classroomId);
 
-  Classroom.findById(classroomId, (err, classroomData) => {
-    if (err) {
-      console.log("Error:", err);
-      return next(new Error("Internal_Server_Error"));
-    }
-
+    const classroomData = await Classroom.findById(classroomId);
     if (!classroomData) {
       return res.status(404).send({
-        message: `Not found classroom with id : ${classroomId}`,
+        message: `Not found classroom with id : ${req.params.classroomId}`,
       });
     }
 
@@ -274,60 +199,57 @@ export const update = (req, res, next) => {
       return next(new Error("Update_Quiz_Permission"));
     }
 
-    const quizData = new Quiz(req.body);
-    Quiz.update(quizId, quizData, (err, data) => {
-      if (err) {
-        if (err.type === "not_found") {
-          res.status(404).send({
-            message: `Not found quiz with id : ${quizId}`,
-          });
-        } else {
-          return next(new Error("Internal_Server_Error"));
-        }
-      } else {
-        res.send(data);
-      }
-    });
-  });
+    const quizData = {
+      name: req.body.name,
+    };
+
+    const updatedQuizData = await Quiz.update(quizId, quizData);
+
+    res.send(updatedQuizData);
+  } catch (error) {
+    console.log("Error:", error);
+    if (error.type === "not_found") {
+      res.status(404).send({
+        message: `Not found quiz with id : ${req.params.quizId}`,
+      });
+    } else {
+      return next(new Error("Internal_Server_Error"));
+    }
+  }
 };
 
-export const destroy = (req, res, next) => {
-  const quizId = req.params.quizId;
-  const userId = req.userId;
-  const classroomId = req.params.classroomId;
+export const destroy = async (req, res, next) => {
+  try {
+    const quizId = req.params.quizId;
+    const userId = req.userId;
+    const classroomId = req.params.classroomId;
 
-  Classroom.findById(classroomId, (err, classroomData) => {
-    if (err) {
-      console.log("Error:", err);
-      return next(new Error("Internal_Server_Error"));
-    }
-
+    const classroomData = await Classroom.findById(classroomId);
     if (!classroomData) {
       return res.status(404).send({
-        message: `Not found classroom with id : ${classroomId}`,
+        message: `Not found classroom with id : ${req.params.classroomId}`,
       });
     }
 
     const ownerId = classroomData.owner_id;
 
     if (userId !== ownerId) {
-      return next(new Error("Update_Quiz_Permission"));
+      return next(new Error("Delete_Quiz_Permission"));
     }
 
-    Quiz.delete(quizId, (err, data) => {
-      if (err) {
-        if (err.type === "not_found") {
-          res.status(404).send({
-            message: `Not found quiz with id : ${quizId}`,
-          });
-        } else {
-          return next(new Error("Internal_Server_Error"));
-        }
-      } else {
-        res.send({ msg: "Success delete quiz" });
-      }
-    });
-  });
+    await Quiz.delete(quizId);
+
+    res.send({ msg: "Success delete quiz" });
+  } catch (error) {
+    console.log("Error:", error);
+    if (error.type === "not_found") {
+      res.status(404).send({
+        message: `Not found quiz with id : ${req.params.quizId}`,
+      });
+    } else {
+      return next(new Error("Internal_Server_Error"));
+    }
+  }
 };
 
 export const updatePublicQuiz = (req, res, next) => {
@@ -349,20 +271,21 @@ export const updatePublicQuiz = (req, res, next) => {
   });
 };
 
-export const destroyPublicQuiz = (req, res, next) => {
-  const quizId = req.params.quizId;
+export const destroyPublicQuiz = async (req, res, next) => {
+  try {
+    const quizId = req.params.quizId;
 
-  Quiz.delete(quizId, (err, data) => {
-    if (err) {
-      if (err.type === "not_found") {
-        res.status(404).send({
-          message: `Not found public quiz with id : ${quizId}`,
-        });
-      } else {
-        return next(new Error("Internal_Server_Error"));
-      }
+    await Quiz.delete(quizId);
+
+    res.send({ msg: "Success delete public quiz" });
+  } catch (error) {
+    console.log("Error:", error);
+    if (error.type === "not_found") {
+      res.status(404).send({
+        message: `Not found public quiz with id : ${quizId}`,
+      });
     } else {
-      res.send({ msg: "Success delete public quiz" });
+      return next(new Error("Internal_Server_Error"));
     }
-  });
+  }
 };

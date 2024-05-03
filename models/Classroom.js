@@ -9,172 +9,139 @@ const Classroom = function (room) {
   this.student_id = room.student_id;
 };
 
-Classroom.create = (newClass, result) => {
-  sql.query(`INSERT INTO ${tableName} SET ?`, newClass, (err, res) => {
-    if (err) {
-      console.log("Error while querying:", err);
-      result(err, null);
+Classroom.create = async (newClassroom) => {
+  try {
+    const { name, join_code, owner_id } = newClassroom;
+    const [result] = await sql.execute(
+      `INSERT INTO ${tableName} (name, join_code, owner_id) VALUES (?, ?, ?)`,
+      [name, join_code, owner_id]
+    );
+    console.log("Data is successfully entered", result);
+    return { id: result.insertId, ...newClassroom };
+  } catch (error) {
+    console.log("Error while querying:", error);
+    throw error;
+  }
+};
+
+Classroom.getAll = async () => {
+  try {
+    const [rows] = await sql.execute(`SELECT * FROM ${tableName}`);
+    return rows;
+  } catch (error) {
+    console.log("Error while getting classrooms:", error);
+    throw error;
+  }
+};
+
+Classroom.findById = async (id) => {
+  try {
+    const [rows] = await sql.execute(
+      `SELECT * FROM ${tableName} WHERE id = ?`,
+      [id]
+    );
+    if (rows.length) {
+      return rows[0];
     } else {
-      console.log("Data is successfully entered", res);
-      result(null, { id: res.insertId, ...newClass });
+      throw { type: "not_found" };
     }
-  });
+  } catch (error) {
+    throw error;
+  }
 };
 
-Classroom.getAll = (result) => {
-  sql.query(`SELECT * FROM ${tableName}`, (err, res) => {
-    if (err) {
-      console.log("Error while getting classrooms:", err);
-      result(err, null);
-      return;
-    }
-    console.log("Classrooms data:", res);
-    result(null, res);
-  });
+Classroom.findByUserId = async (user_id) => {
+  try {
+    const [rows] = await sql.execute(
+      `SELECT * FROM ${tableName} WHERE owner_id = ? OR JSON_CONTAINS(student_id, CAST(? AS JSON))`,
+      [user_id, user_id]
+    );
+    return rows;
+  } catch (error) {
+    console.log("Error while querying:", error);
+    throw error;
+  }
 };
 
-Classroom.findById = (id, result) => {
-  sql.query(`SELECT * FROM ${tableName} WHERE id = ${id}`, (err, res) => {
-    if (err) {
-      result(err, null);
-      return;
+Classroom.update = async (id, data) => {
+  try {
+    const [result] = await sql.execute(
+      `UPDATE ${tableName} SET name = ? WHERE id = ?`,
+      [data.name, id]
+    );
+    if (result.affectedRows === 0) {
+      throw { type: "not_found" };
+    } else {
+      return { id: id, data };
     }
-    if (res.length) {
-      result(null, res[0]);
-      return;
-    }
-    result({ type: "not_found" }, null);
-  });
+  } catch (error) {
+    console.log("Error while updating:", error);
+    throw error;
+  }
 };
 
-Classroom.findByUserId = (user_id, result) => {
-  sql.query(
-    `SELECT * FROM ${tableName} WHERE owner_id = ${user_id} OR JSON_CONTAINS(student_id, CAST(${user_id} AS JSON))`,
-    (err, res) => {
-      if (err) {
-        result(err, null);
-        return;
-      }
-      result(null, res);
+Classroom.delete = async (id) => {
+  try {
+    const [result] = await sql.execute(
+      `DELETE FROM ${tableName} WHERE id = ?`,
+      [id]
+    );
+    if (result.affectedRows === 0) {
+      throw { type: "not_found" };
     }
-  );
+    return { success: true };
+  } catch (error) {
+    console.log("Error while deleting:", error);
+    throw error;
+  }
 };
 
-Classroom.update = (id, data, result) => {
-  sql.query(
-    `UPDATE ${tableName} SET name = ? WHERE id = ?`,
-    [data.name, id],
-    (err, res) => {
-      if (err) {
-        result(err, null);
-        return;
-      }
+Classroom.join = async (join_code, userId) => {
+  try {
+    const [classroomResult] = await sql.execute(
+      `SELECT owner_id, student_id FROM ${tableName} WHERE join_code = ?`,
+      [join_code]
+    );
 
-      if (res.affectedRows == 0) {
-        result({ type: "not_found" }, null);
-        return;
-      }
-      result(null, { id: id, data });
-    }
-  );
-};
-
-Classroom.delete = (id, result) => {
-  sql.query(`DELETE FROM ${tableName} WHERE id = ?`, id, (err, res) => {
-    if (err) {
-      result(err, null);
-      return;
+    if (classroomResult.length === 0) {
+      return { success: false, message: "Invalid_Join_Code" };
     }
 
-    if (res.affectedRows == 0) {
-      result({ type: "not_found" }, null);
-      return;
+    const { owner_id, student_id } = classroomResult[0];
+
+    if (owner_id === userId) {
+      return { success: false, message: "Owner_Cannot_Join" };
     }
-    result(null, res);
-  });
-};
 
-Classroom.join = (join_code, userId, result) => {
-  // memeriksa apakah user_id adalah owner_id
-  sql.query(
-    `SELECT owner_id FROM ${tableName} WHERE join_code = ?`,
-    join_code,
-    (err, res) => {
-      if (err) {
-        result(err, null);
-        return;
-      }
-      if (res.length === 0) {
-        result({ success: false, message: "Invalid_Join_Code" }, null);
-        return;
-      }
-      const ownerId = res[0].owner_id;
-
-      if (ownerId === userId) {
-        result({ success: false, message: "Owner_Cannot_Join" }, null);
-        return;
-      }
-      sql.query(
-        `SELECT student_id FROM ${tableName} WHERE join_code = ?`,
-        join_code,
-        (err, res) => {
-          if (err) {
-            result(err, null);
-            return;
-          }
-          // jika tidak ada kelas dengan join_code yang diminta
-          if (res.length === 0) {
-            console.log("Class not found for join_code:", join_code);
-            result({ success: false, message: "Invalid_Join_Code" }, null);
-            return;
-          }
-          console.log("Results of class search:", res);
-          // mengambil hasil pertama dari res yang join_code nya sesuai
-          const classroom = res[0];
-          let studentIds = [];
-          try {
-            studentIds = JSON.parse(classroom.student_id);
-          } catch (error) {
-            console.log("Error while parsing student_id:", error);
-            result(
-              { success: false, message: "Invalid_Format_StudentID" },
-              null
-            );
-            return;
-          }
-
-          // cek apakah student_id sudah ada
-          if (studentIds.includes(userId)) {
-            console.log("User has joined this class:", userId);
-            result(
-              { success: false, message: "User_Already_Joined_Classroom" },
-              null
-            );
-            return;
-          }
-
-          studentIds.push(userId);
-          sql.query(
-            `UPDATE ${tableName} SET student_id = ? WHERE join_code = ?`,
-            [JSON.stringify(studentIds), join_code],
-            (err, res) => {
-              if (err) {
-                result(err, null);
-                return;
-              }
-
-              if (res.affectedRows === 0) {
-                result({ success: false, message: "not_found" }, null);
-                return;
-              }
-              console.log("User successfully joined the class");
-              result(null, { join_code: join_code, student_id: studentIds });
-            }
-          );
-        }
-      );
+    let studentIds = [];
+    if (student_id !== null && student_id !== undefined) {
+      studentIds = student_id;
     }
-  );
+
+    if (studentIds.includes(userId)) {
+      return { success: false, message: "User_Already_Joined_Classroom" };
+    }
+
+    if (!student_id) {
+      studentIds = [userId];
+    } else {
+      studentIds.push(userId);
+    }
+
+    const [updateResult] = await sql.execute(
+      `UPDATE ${tableName} SET student_id = ? WHERE join_code = ?`,
+      [JSON.stringify(studentIds), join_code]
+    );
+
+    if (updateResult.affectedRows === 0) {
+      throw { type: "not_found" };
+    }
+
+    return { join_code: join_code, student_id: studentIds };
+  } catch (error) {
+    console.log("Error while joining classroom:", error);
+    throw error;
+  }
 };
 
 export default Classroom;
