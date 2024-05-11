@@ -45,8 +45,7 @@ npm install
 3. Import documentation
    Buka postman, kemudian import file Postman_documentation yang ada di file documentation ke Postman Anda.
 
-4. Buat global variabel
-   Buatlah global variabel untuk token, yang akan didapatkan ketika user sudah login. Untuk base_url gunakan:
+4. Buatlah global variabel untuk token, yang akan didapatkan ketika user sudah login. Lalu buat global variabel juga untuk base_url dan gunakan:
 
 ```sh
 https://backendprojecttalithadwiarini-production.up.railway.app
