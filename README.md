@@ -1,4 +1,4 @@
-# Program Kuis
+# Scholastic Quiz Program 
 
 Aplikasi Kuis Online ini merupakan mini project yang bertujuan untuk memberikan pengalaman interaktif dalam menjalani kuis online. Pengguna dapat mendaftar, login, meng-update profil, mengerjakan kuis, dan melihat hasil kuis serta peringkat pengguna lainnya. Proyek ini dibuat sebagai salah satu penilaian untuk Bab Backend.
 
